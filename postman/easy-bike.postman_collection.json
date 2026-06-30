@@ -1,0 +1,76 @@
+{
+  "info": {
+    "name": "Easy Bike API",
+    "_postman_id": "d4e0a9f9-4d9b-4b95-91f0-7c6b7f110001",
+    "description": "Coleccion base del proyecto Easy Bike para pruebas iniciales del backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "General",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Verifica que el backend NestJS este respondiendo."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Verifica el estado general del backend."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /health/db",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/db",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "db"
+              ]
+            },
+            "description": "Muestra el estado de preparacion de la conexion a base de datos."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

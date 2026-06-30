@@ -1,0 +1,38 @@
+-- =========================================================
+-- Easy Bike - SQL Scaffold
+-- =========================================================
+-- Este archivo es una plantilla base para el encargado de BD.
+-- No define tablas finales del negocio porque aun pueden cambiar.
+-- Proyecto objetivo: Supabase PostgreSQL.
+--
+-- Nota:
+-- En Supabase no hace falta crear la base con CREATE DATABASE;
+-- el proyecto ya incluye una base PostgreSQL administrada.
+--
+-- Convenciones sugeridas:
+-- 1. Usar snake_case en tablas y columnas.
+-- 2. Preferir uuid como PK cuando aplique.
+-- 3. Incluir created_at y updated_at en tablas transaccionales.
+-- 4. Usar timestamptz para fechas.
+-- 5. Definir llaves foraneas, indices y restricciones desde el inicio.
+-- 6. Documentar politicas RLS si se usan.
+--
+-- Secciones recomendadas para completar despues:
+-- A. Extensiones
+-- B. Tablas catalogo
+-- C. Tablas transaccionales
+-- D. Indices
+-- E. Seeds
+-- F. Politicas RLS
+--
+-- Ejemplo opcional:
+-- create extension if not exists pgcrypto;
+--
+-- Ejemplo de estructura base:
+-- create table if not exists public.example_table (
+--   id uuid primary key default gen_random_uuid(),
+--   created_at timestamptz not null default timezone('utc', now()),
+--   updated_at timestamptz not null default timezone('utc', now())
+-- );
+
+select 'Easy Bike SQL scaffold ready' as message;
