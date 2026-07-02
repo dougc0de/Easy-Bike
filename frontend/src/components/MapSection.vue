@@ -42,10 +42,15 @@ defineProps<{
           <div class="map-section__placeholder-point" />
         </div>
 
-        <a class="map-section__cta" :href="location.externalUrl" target="_blank" rel="noreferrer">
+        <a class="map-section__cta" :href="location.externalUrl" :title="location.ctaLabel" target="_blank" rel="noreferrer">
           <span class="map-section__cta-icon">⌖</span>
           <span>Clic aca</span>
         </a>
+
+        <div class="map-section__info">
+          <strong>{{ location.address }}</strong>
+          <span>{{ location.schedule }}</span>
+        </div>
       </div>
     </div>
   </section>
@@ -137,27 +142,43 @@ defineProps<{
 }
 
 .map-section__placeholder {
+  position: relative;
   min-height: 355px;
-  background:
-    radial-gradient(circle at 50% 44%, rgba(53, 213, 189, 0.88) 0 5px, transparent 6px),
-    linear-gradient(134deg, rgba(255, 255, 255, 0.96), rgba(230, 248, 244, 0.88)),
-    linear-gradient(90deg, rgba(53, 175, 159, 0.12) 1px, transparent 1px),
-    linear-gradient(rgba(53, 175, 159, 0.12) 1px, transparent 1px),
-    linear-gradient(24deg, transparent 46%, rgba(87, 178, 168, 0.28) 47%, rgba(87, 178, 168, 0.28) 49%, transparent 50%),
-    linear-gradient(118deg, transparent 43%, rgba(87, 178, 168, 0.2) 44%, rgba(87, 178, 168, 0.2) 46%, transparent 47%),
-    linear-gradient(76deg, transparent 64%, rgba(87, 178, 168, 0.18) 65%, rgba(87, 178, 168, 0.18) 67%, transparent 68%);
-  background-size: auto, auto, 72px 72px, 72px 72px, auto, auto, auto;
+  background: #f7fbfb;
+}
+
+.map-section__placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/images/map.jpg') center / cover no-repeat;
+  opacity: 0.6;
 }
 
 .map-section__placeholder-point {
   position: absolute;
-  top: 44%;
+  top: 39%;
   left: 50%;
-  width: 10px;
-  height: 10px;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  background: #10d847;
+  border: 3px solid #fff;
+  box-shadow: 0 10px 24px rgba(16, 216, 71, 0.24);
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+.map-section__placeholder-point::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #23d4a9;
-  transform: translateX(-50%);
+  background: #fff;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .map-section__cta {
@@ -181,6 +202,30 @@ defineProps<{
 
 .map-section__cta-icon {
   font-size: 1.15rem;
+}
+
+.map-section__info {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.2rem;
+  max-width: min(38rem, calc(100% - 2rem));
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #132129;
+  box-shadow: 0 14px 28px rgba(19, 33, 41, 0.1);
+}
+
+.map-section__info strong,
+.map-section__info span {
+  margin: 0;
+}
+
+.map-section__info span {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
 }
 
 @media (max-width: 760px) {
@@ -208,6 +253,21 @@ defineProps<{
 
   .map-section__cta {
     padding-inline: 1.2rem;
+  }
+
+  .map-section__info {
+    right: 0.6rem;
+    bottom: 0.6rem;
+    max-width: calc(100% - 1.2rem);
+    padding: 0.7rem 0.8rem;
+  }
+
+  .map-section__info strong {
+    font-size: 0.95rem;
+  }
+
+  .map-section__info span {
+    font-size: 0.85rem;
   }
 }
 </style>
