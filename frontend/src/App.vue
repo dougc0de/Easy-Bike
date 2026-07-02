@@ -100,12 +100,12 @@ function resolvePage(hash: string): PageId {
   }
 }
 
-function cloneCollection<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
-}
-
 function isAuthRole(value: unknown): value is AuthRole {
   return value === 'cliente' || value === 'administracion'
+}
+
+function cloneCollection<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
 }
 
 function loadStoredCollection<T>(key: string, fallback: T): T {
