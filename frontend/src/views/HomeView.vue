@@ -309,8 +309,8 @@ function reserveCurrentBike() {
 }
 
 .home-hero__button {
-  min-width: 270px;
-  padding: 1rem 1.75rem;
+  min-width: 220px;
+  padding: 0.9rem 1.35rem;
   border: 0;
   border-radius: 12px;
   background: #f28705;
@@ -328,12 +328,11 @@ function reserveCurrentBike() {
 }
 
 .home-reasons {
-
   position: relative;
   width: 100%;
   overflow: hidden;
-  margin-top: 1rem ;
-  margin-bottom: 1rem ;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
   padding-bottom: 2rem;
   padding-top: 2rem;
   background: #fff;
@@ -341,14 +340,13 @@ function reserveCurrentBike() {
 
 .home-reasons__corner,
 .home-bikes__corner {
-  
   position: absolute;
   background: #2da8c1;
 }
 
 .home-reasons__corner--left {
   top: 0;
-  left: 0;
+  left: -34px;
   width: 170px;
   height: 220px;
   clip-path: polygon(0 0, 78% 0, 100% 16%, 63% 45%, 63% 78%, 0 100%);
@@ -363,6 +361,8 @@ function reserveCurrentBike() {
 }
 
 .home-reasons__grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   align-items: center;
   gap: 2rem;
@@ -371,6 +371,8 @@ function reserveCurrentBike() {
 }
 
 .home-reasons__brand {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 1.2rem;
   align-items: center;
@@ -378,6 +380,8 @@ function reserveCurrentBike() {
 }
 
 .home-reasons__brand-logo {
+  position: relative;
+  z-index: 1;
   width: min(100%, 540px);
   height: auto;
   object-fit: contain;
@@ -726,7 +730,7 @@ function reserveCurrentBike() {
 
 .home-bikes__reserve,
 .home-bikes__catalog-link {
-  padding: 0.9rem 1.35rem;
+  padding: 0.81rem 0.95rem;
   border-radius: 12px;
   font-weight: 700;
 }
@@ -834,6 +838,7 @@ function reserveCurrentBike() {
   }
 
   .home-reasons__corner--left {
+    left: -18px;
     width: 110px;
     height: 160px;
   }

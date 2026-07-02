@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import SiteHeader from './components/SiteHeader.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import MapSection from './components/MapSection.vue'
@@ -57,6 +57,11 @@ const reservations = ref<ReservationSummary[]>(
   loadStoredCollection(RESERVATIONS_STORAGE_KEY, initialReservations),
 )
 const loginEntryMessage = ref('')
+const enableScrollReveal =
+  typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+let revealObserver: IntersectionObserver | null = null
+let revealFrameId: number | null = null
 
 const headerItems = computed<NavigationItem[]>(() =>
   navigationItems.map((item) =>
@@ -279,6 +284,61 @@ function handleAvailabilityUpdated(payload: {
   )
 }
 
+function disconnectScrollReveal() {
+  revealObserver?.disconnect()
+  revealObserver = null
+}
+
+function registerScrollRevealTargets() {
+  if (typeof document === 'undefined') return
+
+  const targets = Array.from(
+    document.querySelectorAll<HTMLElement>('.page-content > * > section, .map-section'),
+  )
+
+  if (!targets.length) return
+
+  if (!enableScrollReveal) {
+    targets.forEach((target) => target.classList.add('is-visible'))
+    return
+  }
+
+  disconnectScrollReveal()
+
+  revealObserver = new IntersectionObserver(
+    (entries, observer) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+
+        entry.target.classList.add('is-visible')
+        observer.unobserve(entry.target)
+      }
+    },
+    {
+      threshold: 0.16,
+      rootMargin: '0px 0px -12% 0px',
+    },
+  )
+
+  targets.forEach((target) => {
+    target.classList.remove('is-visible')
+    revealObserver?.observe(target)
+  })
+}
+
+function scheduleScrollRevealRegistration() {
+  if (typeof window === 'undefined') return
+
+  if (revealFrameId !== null) {
+    window.cancelAnimationFrame(revealFrameId)
+  }
+
+  revealFrameId = window.requestAnimationFrame(() => {
+    revealFrameId = null
+    registerScrollRevealTargets()
+  })
+}
+
 watch(
   bikes,
   (value) => {
@@ -295,18 +355,33 @@ watch(
   { deep: true },
 )
 
+watch(
+  [currentPage, showMapSection],
+  async () => {
+    await nextTick()
+    scheduleScrollRevealRegistration()
+  },
+  { flush: 'post' },
+)
+
 onMounted(() => {
   ensureInitialRoute()
   window.addEventListener('hashchange', syncPageWithHash)
+  scheduleScrollRevealRegistration()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('hashchange', syncPageWithHash)
+  disconnectScrollReveal()
+
+  if (revealFrameId !== null) {
+    window.cancelAnimationFrame(revealFrameId)
+  }
 })
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'has-scroll-reveal': enableScrollReveal }">
     <SiteHeader
       :items="headerItems"
       :current-page="currentPage"

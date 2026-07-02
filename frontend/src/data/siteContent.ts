@@ -165,7 +165,7 @@ export const footerMeta: FooterMeta = {
   brand: 'Easy Bike',
   description:
     'Plataforma web para reservar bicicletas eléctricas con una experiencia clara, sobria y lista para integrarse con backend.',
-  caption: 'Easy Bike · Proyecto frontend preparado para integración con backend y Google Maps.',
+  caption: 'Derechos Reservados.',
 }
 
 export const aboutValues: AboutValue[] = [

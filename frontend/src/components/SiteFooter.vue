@@ -13,33 +13,7 @@ const emit = defineEmits<{
 
 <template>
   <footer class="site-footer">
-    <div class="container site-footer__menus">
-      <div class="site-footer__brand">
-        <div class="site-footer__badge">Easy Bike</div>
-        <p>{{ meta.description }}</p>
-      </div>
 
-      <div class="site-footer__columns">
-        <section v-for="column in columns" :key="column.title" class="site-footer__column">
-          <h3>{{ column.title }}</h3>
-          <ul>
-            <li v-for="link in column.links" :key="link.label">
-              <button
-                v-if="link.page"
-                type="button"
-                class="site-footer__link"
-                @click="emit('navigate', link.page)"
-              >
-                {{ link.label }}
-              </button>
-              <a v-else class="site-footer__link" :href="link.href" target="_blank" rel="noreferrer">
-                {{ link.label }}
-              </a>
-            </li>
-          </ul>
-        </section>
-      </div>
-    </div>
 
     <div class="site-footer__line">
       <div class="container site-footer__line-content">
@@ -55,6 +29,7 @@ const emit = defineEmits<{
   background:
     linear-gradient(135deg, rgba(45, 168, 193, 0.08), rgba(255, 255, 255, 0.92)),
     #fff;
+    
 }
 
 .site-footer__menus {
@@ -118,6 +93,9 @@ const emit = defineEmits<{
 .site-footer__line {
   border-top: 1px solid rgba(19, 33, 41, 0.08);
   background: #00200b;
+  display: flex;
+  text-align: center;
+  
 }
 
 .site-footer__line-content {
