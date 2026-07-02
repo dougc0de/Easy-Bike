@@ -365,6 +365,7 @@ onBeforeUnmount(() => {
         :reservations="reservations"
         @bike-created="handleBikeCreated"
         @availability-updated="handleAvailabilityUpdated"
+        @reservation-created="handleReservationCreated"
       />
 
       <LoginView

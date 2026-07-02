@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { mockUsers } from '../data/siteContent'
+import { reactive, ref } from 'vue'
 import { loginUser } from '../services/siteApi'
 import type { AuthSession, LoginHighlight, LoginPayload, PageId } from '../types'
 
@@ -25,18 +24,6 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const feedback = ref('')
 const feedbackType = ref<'success' | 'error'>('success')
-const demoAccess = computed(() =>
-  mockUsers.map((user) => ({
-    ...user,
-    label: user.role === 'administracion' ? 'Acceso administrador' : 'Acceso cliente',
-  })),
-)
-
-function applyDemoAccess(email: string, password: string) {
-  form.email = email
-  form.password = password
-  feedback.value = ''
-}
 
 async function onSubmit() {
   if (!form.email || !form.password) {
@@ -104,23 +91,6 @@ async function onSubmit() {
               />
               <button type="button" class="login-form__toggle" @click="showPassword = !showPassword">
                 {{ showPassword ? 'Ocultar' : 'Mostrar' }}
-              </button>
-            </div>
-          </div>
-
-          <div class="login-form__demo">
-            <span class="login-form__demo-label">Accesos de prueba</span>
-            <div class="login-form__demo-grid">
-              <button
-                v-for="user in demoAccess"
-                :key="user.email"
-                type="button"
-                class="login-form__demo-button"
-                @click="applyDemoAccess(user.email, user.password)"
-              >
-                <strong>{{ user.label }}</strong>
-                <span>{{ user.email }}</span>
-                <small>{{ user.password }}</small>
               </button>
             </div>
           </div>
@@ -264,52 +234,6 @@ async function onSubmit() {
   font-weight: 700;
 }
 
-.login-form__demo {
-  display: grid;
-  gap: 0.8rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid rgba(19, 33, 41, 0.08);
-}
-
-.login-form__demo-label {
-  font-weight: 700;
-  color: var(--ink-strong);
-}
-
-.login-form__demo-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.login-form__demo-button {
-  display: grid;
-  justify-items: start;
-  gap: 0.2rem;
-  padding: 1rem;
-  border: 1px solid rgba(19, 33, 41, 0.1);
-  border-radius: 16px;
-  background: rgba(243, 247, 248, 0.9);
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.login-form__demo-button:hover {
-  transform: translateY(-2px);
-  border-color: rgba(45, 168, 193, 0.4);
-  box-shadow: 0 14px 22px rgba(20, 59, 53, 0.08);
-}
-
-.login-form__demo-button strong {
-  color: var(--brand-teal);
-}
-
-.login-form__demo-button span,
-.login-form__demo-button small {
-  color: var(--ink-soft);
-}
-
 .login-form__register {
   display: flex;
   flex-wrap: wrap;
@@ -342,10 +266,6 @@ async function onSubmit() {
 @media (min-width: 920px) {
   .login-hero__grid {
     grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
-  }
-
-  .login-form__demo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

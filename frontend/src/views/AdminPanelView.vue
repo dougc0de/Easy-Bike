@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import type { AuthSession, BikeItem, ReservationSummary } from '../types'
+import { computed, reactive, ref, watch } from 'vue'
+import { submitReservation } from '../services/siteApi'
+import type {
+  AuthSession,
+  BikeItem,
+  ReservationPayload,
+  ReservationSummary,
+  ReservationVoucher,
+} from '../types'
 
 const props = defineProps<{
   session: AuthSession
@@ -11,11 +18,21 @@ const props = defineProps<{
 const emit = defineEmits<{
   bikeCreated: [bike: BikeItem]
   availabilityUpdated: [payload: { bikeId: string; availability: BikeItem['availability'] }]
+  reservationCreated: [reservation: ReservationSummary]
 }>()
 
+const today = new Date().toISOString().split('T')[0]
+const pickupTimeMin = '08:00'
+const pickupTimeMax = '20:00'
 const isSavingBike = ref(false)
 const bikeFeedback = ref('')
 const bikeFeedbackType = ref<'success' | 'error'>('success')
+const isCreatingReservation = ref(false)
+const reservationFeedback = ref('')
+const reservationFeedbackType = ref<'success' | 'error'>('success')
+const selectedReservationBikeId = ref('')
+const generatedVoucher = ref<ReservationVoucher | null>(null)
+const successModal = ref<{ message: string; voucher: ReservationVoucher } | null>(null)
 
 const availabilityOptions: BikeItem['availability'][] = ['Disponible', 'Últimas unidades', 'Próximamente']
 
@@ -45,11 +62,96 @@ const warningCount = computed(() =>
   props.bikes.filter((bike) => bike.availability === 'Últimas unidades').length,
 )
 
+const reservableBikes = computed(() =>
+  props.bikes.filter((bike) => bike.availability === 'Disponible' || bike.availability === 'Últimas unidades'),
+)
+
+const availabilityByCategory = computed(() => {
+  const grouped = new Map<
+    string,
+    {
+      category: string
+      availableCount: number
+      lastUnitsCount: number
+      totalCount: number
+    }
+  >()
+
+  for (const bike of props.bikes) {
+    const current = grouped.get(bike.category) ?? {
+      category: bike.category,
+      availableCount: 0,
+      lastUnitsCount: 0,
+      totalCount: 0,
+    }
+
+    current.totalCount += 1
+
+    if (bike.availability === 'Disponible') {
+      current.availableCount += 1
+    }
+
+    if (bike.availability === 'Últimas unidades') {
+      current.lastUnitsCount += 1
+    }
+
+    grouped.set(bike.category, current)
+  }
+
+  return Array.from(grouped.values()).sort((left, right) => left.category.localeCompare(right.category))
+})
+
+const selectedReservationBike = computed(
+  () =>
+    reservableBikes.value.find((bike) => bike.id === selectedReservationBikeId.value) ??
+    reservableBikes.value[0],
+)
+
 const recentReservations = computed(() =>
   [...props.reservations]
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
     .slice(0, 6),
 )
+
+const storeReservationForm = reactive<ReservationPayload>({
+  fullName: '',
+  email: '',
+  phone: '',
+  bikeId: '',
+  date: '',
+  time: '',
+  duration: '24',
+  pickupPoint: 'Punto Central Easy Bike',
+  notes: '',
+})
+
+watch(
+  reservableBikes,
+  (bikes) => {
+    if (!bikes.length) {
+      selectedReservationBikeId.value = ''
+      storeReservationForm.bikeId = ''
+      return
+    }
+
+    const currentBikeStillAvailable = bikes.some((bike) => bike.id === selectedReservationBikeId.value)
+
+    if (!currentBikeStillAvailable) {
+      const firstBike = bikes[0]
+
+      if (!firstBike) return
+
+      selectedReservationBikeId.value = firstBike.id
+    }
+
+    storeReservationForm.bikeId = selectedReservationBikeId.value
+  },
+  { immediate: true },
+)
+
+watch(selectedReservationBikeId, (bikeId) => {
+  storeReservationForm.bikeId = bikeId
+})
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('es-419', {
@@ -64,6 +166,12 @@ function formatDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function formatLongDate(value: string) {
+  return new Intl.DateTimeFormat('es-419', {
+    dateStyle: 'long',
+  }).format(new Date(`${value}T12:00:00`))
 }
 
 function getAvailabilityClass(availability: BikeItem['availability']) {
@@ -103,6 +211,26 @@ function buildRecommendedUse(category: string) {
   if (normalizedCategory.includes('todo')) return 'Recorridos mixtos y rutas más exigentes.'
   if (normalizedCategory.includes('confort')) return 'Usuarios que priorizan comodidad y estabilidad.'
   return 'Movilidad urbana y reservas rápidas dentro de la ciudad.'
+}
+
+function parseTimeToMinutes(value: string) {
+  const [hoursPart = '', minutesPart = ''] = value.split(':')
+  const hours = Number(hoursPart)
+  const minutes = Number(minutesPart)
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+
+  return hours * 60 + minutes
+}
+
+function isPickupTimeAllowed(value: string) {
+  const pickupMinutes = parseTimeToMinutes(value)
+  const minMinutes = parseTimeToMinutes(pickupTimeMin)
+  const maxMinutes = parseTimeToMinutes(pickupTimeMax)
+
+  if (pickupMinutes === null || minMinutes === null || maxMinutes === null) return false
+
+  return pickupMinutes >= minMinutes && pickupMinutes <= maxMinutes
 }
 
 async function onSubmit() {
@@ -158,6 +286,87 @@ async function onSubmit() {
 
 function updateAvailability(bikeId: string, availability: BikeItem['availability']) {
   emit('availabilityUpdated', { bikeId, availability })
+}
+
+async function onStoreReservationSubmit() {
+  if (!selectedReservationBike.value) {
+    reservationFeedbackType.value = 'error'
+    reservationFeedback.value = 'No hay bicicletas reservables en este momento para atención en tienda.'
+    return
+  }
+
+  if (
+    !storeReservationForm.fullName.trim() ||
+    !storeReservationForm.email.trim() ||
+    !storeReservationForm.phone.trim() ||
+    !storeReservationForm.date ||
+    !storeReservationForm.time
+  ) {
+    reservationFeedbackType.value = 'error'
+    reservationFeedback.value = 'Completa nombre, correo, teléfono, fecha y hora para generar la reserva.'
+    return
+  }
+
+  if (!isPickupTimeAllowed(storeReservationForm.time)) {
+    reservationFeedbackType.value = 'error'
+    reservationFeedback.value = 'La hora de retiro debe estar entre 8:00 a.m. y 8:00 p.m.'
+    return
+  }
+
+  isCreatingReservation.value = true
+
+  try {
+    const result = await submitReservation(
+      {
+        ...storeReservationForm,
+        email: storeReservationForm.email.trim().toLowerCase(),
+        bikeId: selectedReservationBike.value.id,
+      },
+      {
+        bikeName: selectedReservationBike.value.name,
+        priceLabel: selectedReservationBike.value.price,
+      },
+    )
+
+    const reservation: ReservationSummary = {
+      id: `reservation-${Date.now()}`,
+      customerName: storeReservationForm.fullName.trim(),
+      customerEmail: storeReservationForm.email.trim().toLowerCase(),
+      bikeId: selectedReservationBike.value.id,
+      bikeName: selectedReservationBike.value.name,
+      date: storeReservationForm.date,
+      time: storeReservationForm.time,
+      duration: result.voucher.duration,
+      pickupPoint: storeReservationForm.pickupPoint,
+      amount: result.amount,
+      status: 'Pendiente de entrega',
+      voucherCode: result.voucher.code,
+      paymentMethod: result.voucher.paymentMethod,
+      createdAt: new Date().toISOString(),
+    }
+
+    emit('reservationCreated', reservation)
+    generatedVoucher.value = result.voucher
+    successModal.value = {
+      message: result.message,
+      voucher: result.voucher,
+    }
+    reservationFeedback.value = ''
+
+    storeReservationForm.fullName = ''
+    storeReservationForm.email = ''
+    storeReservationForm.phone = ''
+    storeReservationForm.date = ''
+    storeReservationForm.time = ''
+    storeReservationForm.duration = '24'
+    storeReservationForm.notes = ''
+  } catch (error) {
+    reservationFeedbackType.value = 'error'
+    reservationFeedback.value =
+      error instanceof Error ? error.message : 'No se pudo procesar la reserva de tienda en este momento.'
+  } finally {
+    isCreatingReservation.value = false
+  }
 }
 </script>
 
@@ -292,6 +501,32 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
             <span>{{ props.bikes.length - availableCount - warningCount }} próximamente</span>
           </div>
 
+          <div class="admin-availability">
+            <span class="eyebrow">Disponibles por tipo de bicicleta</span>
+            <p class="section-copy">
+              Este resumen ya deja visible el bloque que luego backend podrá alimentar desde base de
+              datos o API sin rehacer la interfaz.
+            </p>
+
+            <div v-if="availabilityByCategory.length" class="admin-availability__list">
+              <article
+                v-for="group in availabilityByCategory"
+                :key="group.category"
+                class="admin-availability__item"
+              >
+                <div class="admin-availability__head">
+                  <strong>{{ group.category }}</strong>
+                  <span>{{ group.availableCount }} disponibles</span>
+                </div>
+
+                <div class="admin-availability__meta">
+                  <span>{{ group.lastUnitsCount }} últimas unidades</span>
+                  <span>{{ group.totalCount }} total registradas</span>
+                </div>
+              </article>
+            </div>
+          </div>
+
           <div class="admin-inventory__list">
             <article v-for="bike in props.bikes" :key="bike.id" class="admin-bike">
               <div class="admin-bike__media">
@@ -327,6 +562,199 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
             </article>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="admin-store">
+      <div class="container admin-store__stack">
+        <div class="section-header admin-store__header">
+          <span class="eyebrow">Reservar en tienda</span>
+          <h2 class="section-title">Registra una reserva presencial desde el panel.</h2>
+          <p class="section-copy">
+            Este flujo puede usarlo quien atiende en tienda. Queda funcional en frontend y listo
+            para que backend después conecte la lógica real.
+          </p>
+        </div>
+
+        <div class="admin-store__grid">
+          <div class="admin-store__catalog">
+            <div v-if="reservableBikes.length" class="admin-store__selector">
+              <button
+                v-for="bike in reservableBikes"
+                :key="bike.id"
+                type="button"
+                class="admin-store__option"
+                :class="{ 'is-active': selectedReservationBike?.id === bike.id }"
+                @click="selectedReservationBikeId = bike.id"
+              >
+                <strong>{{ bike.name }}</strong>
+                <span>{{ bike.category }} · {{ bike.price }} · {{ bike.autonomy }}</span>
+              </button>
+            </div>
+
+            <article v-if="selectedReservationBike" class="admin-store__bike">
+              <div class="admin-store__media">
+                <img
+                  :src="selectedReservationBike.imageUrl"
+                  :alt="selectedReservationBike.imageAlt"
+                  class="admin-store__image"
+                />
+              </div>
+
+              <div class="admin-store__details">
+                <div class="admin-store__headline">
+                  <h3>{{ selectedReservationBike.name }}</h3>
+                  <span class="status-pill" :class="getAvailabilityClass(selectedReservationBike.availability)">
+                    {{ selectedReservationBike.availability }}
+                  </span>
+                </div>
+
+                <p>{{ selectedReservationBike.detail }}</p>
+
+                <ul class="admin-store__facts">
+                  <li>{{ selectedReservationBike.category }}</li>
+                  <li>{{ selectedReservationBike.price }}</li>
+                  <li>{{ selectedReservationBike.autonomy }}</li>
+                  <li>{{ selectedReservationBike.recommendedFor }}</li>
+                </ul>
+              </div>
+            </article>
+
+            <p v-else class="admin-store__empty">
+              No hay bicicletas listas para reservar desde tienda en este momento.
+            </p>
+          </div>
+
+          <form class="card-surface admin-store__form" @submit.prevent="onStoreReservationSubmit">
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="admin-store-name">Nombre completo</label>
+                <input
+                  id="admin-store-name"
+                  v-model="storeReservationForm.fullName"
+                  type="text"
+                  placeholder="Nombre del cliente"
+                />
+              </div>
+
+              <div class="field">
+                <label for="admin-store-email">Correo electrónico</label>
+                <input
+                  id="admin-store-email"
+                  v-model="storeReservationForm.email"
+                  type="email"
+                  placeholder="cliente@correo.com"
+                />
+              </div>
+            </div>
+
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="admin-store-phone">Teléfono</label>
+                <input
+                  id="admin-store-phone"
+                  v-model="storeReservationForm.phone"
+                  type="tel"
+                  placeholder="+00 123 456 789"
+                />
+              </div>
+
+              <div class="field">
+                <label for="admin-store-duration">Duración</label>
+                <select id="admin-store-duration" v-model="storeReservationForm.duration">
+                  <option value="4">4 horas</option>
+                  <option value="8">8 horas</option>
+                  <option value="12">12 horas</option>
+                  <option value="24">24 horas</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="admin-store-date">Fecha</label>
+                <input id="admin-store-date" v-model="storeReservationForm.date" :min="today" type="date" />
+              </div>
+
+              <div class="field">
+                <label for="admin-store-time">Hora de retiro</label>
+                <input
+                  id="admin-store-time"
+                  v-model="storeReservationForm.time"
+                  :min="pickupTimeMin"
+                  :max="pickupTimeMax"
+                  type="time"
+                />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="admin-store-pickup">Punto de recojo</label>
+              <input
+                id="admin-store-pickup"
+                v-model="storeReservationForm.pickupPoint"
+                type="text"
+                readonly
+              />
+            </div>
+
+            <div class="field">
+              <label for="admin-store-notes">Notas adicionales</label>
+              <textarea
+                id="admin-store-notes"
+                v-model="storeReservationForm.notes"
+                placeholder="Anota alguna referencia útil para la entrega."
+              />
+            </div>
+
+            <p class="helper-text">
+              La reserva queda lista para atención en tienda y el pago se mantiene como físico al
+              retirar la bicicleta.
+            </p>
+
+            <div
+              v-if="reservationFeedback"
+              class="feedback"
+              :class="reservationFeedbackType === 'success' ? 'is-success' : 'is-error'"
+            >
+              {{ reservationFeedback }}
+            </div>
+
+            <button
+              class="secondary-button"
+              type="submit"
+              :disabled="isCreatingReservation || !selectedReservationBike"
+            >
+              {{ isCreatingReservation ? 'Generando voucher...' : 'Confirmar reserva en tienda' }}
+            </button>
+          </form>
+        </div>
+
+        <article v-if="generatedVoucher" class="admin-store__voucher">
+          <div class="admin-store__voucher-head">
+            <strong>{{ generatedVoucher.code }}</strong>
+            <span>Easy Bike</span>
+          </div>
+
+          <div class="admin-store__voucher-grid">
+            <div>
+              <small>Bicicleta</small>
+              <p>{{ generatedVoucher.bikeName }}</p>
+            </div>
+            <div>
+              <small>Fecha</small>
+              <p>{{ formatLongDate(generatedVoucher.date) }}</p>
+            </div>
+            <div>
+              <small>Hora</small>
+              <p>{{ generatedVoucher.time }}</p>
+            </div>
+            <div>
+              <small>Pago</small>
+              <p>{{ generatedVoucher.paymentMethod }}</p>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -378,6 +806,43 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
         </div>
       </div>
     </section>
+
+    <div v-if="successModal" class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-success-title">
+      <div class="admin-modal__backdrop" @click="successModal = null" />
+
+      <article class="admin-modal__card">
+        <span class="eyebrow admin-modal__eyebrow">Reserva confirmada</span>
+        <h2 id="admin-success-title">La reserva presencial quedó lista.</h2>
+        <p class="admin-modal__message">{{ successModal.message }}</p>
+
+        <div class="admin-modal__grid">
+          <div>
+            <small>Código de voucher</small>
+            <strong>{{ successModal.voucher.code }}</strong>
+          </div>
+          <div>
+            <small>Bicicleta</small>
+            <strong>{{ successModal.voucher.bikeName }}</strong>
+          </div>
+          <div>
+            <small>Fecha</small>
+            <strong>{{ formatLongDate(successModal.voucher.date) }}</strong>
+          </div>
+          <div>
+            <small>Hora</small>
+            <strong>{{ successModal.voucher.time }}</strong>
+          </div>
+          <div>
+            <small>Atendido por</small>
+            <strong>{{ session.name }}</strong>
+          </div>
+        </div>
+
+        <button class="secondary-button" type="button" @click="successModal = null">
+          Entendido
+        </button>
+      </article>
+    </div>
   </div>
 </template>
 
@@ -501,6 +966,39 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
   font-weight: 700;
 }
 
+.admin-availability {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-availability__list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-availability__item {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.95rem 1rem;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.admin-availability__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-availability__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
 .admin-inventory__list {
   display: grid;
   gap: 1rem;
@@ -576,6 +1074,227 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
   transform: translateY(-2px);
   background: var(--brand-cyan);
   color: #fff;
+}
+
+.admin-store {
+  padding: 2.5rem 0 3rem;
+  background: #fff;
+}
+
+.admin-store__stack {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.admin-store__header {
+  max-width: 48rem;
+}
+
+.admin-store__grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.admin-store__catalog {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-store__selector {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-store__option {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+  padding: 0.85rem 0 0.85rem 1rem;
+  border: 0;
+  border-left: 4px solid rgba(19, 33, 41, 0.12);
+  background: rgba(239, 246, 248, 0.72);
+  text-align: left;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.admin-store__option.is-active,
+.admin-store__option:hover {
+  transform: translateX(4px);
+  border-left-color: var(--brand-orange);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.admin-store__option span,
+.admin-store__details p,
+.admin-store__empty {
+  color: var(--ink-soft);
+}
+
+.admin-store__bike {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-store__media {
+  min-height: 228px;
+  display: grid;
+  place-items: center;
+  padding: 0.85rem;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 16px 30px rgba(20, 59, 53, 0.08);
+}
+
+.admin-store__image {
+  width: min(100%, 420px);
+  max-height: 205px;
+  object-fit: contain;
+}
+
+.admin-store__details {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-store__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-store__headline h3,
+.admin-store__details p {
+  margin: 0;
+}
+
+.admin-store__facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-store__facts li {
+  padding-left: 1rem;
+  border-left: 3px solid rgba(45, 168, 193, 0.9);
+}
+
+.admin-store__form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.4rem;
+  align-content: start;
+}
+
+.admin-store__voucher {
+  display: grid;
+  gap: 1.2rem;
+  padding: 1.35rem 1.4rem;
+  border: 2px dashed rgba(20, 59, 53, 0.24);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(223, 244, 212, 0.42), rgba(255, 255, 255, 0.98));
+}
+
+.admin-store__voucher-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-store__voucher-head strong {
+  color: var(--brand-teal);
+  font-size: 1.22rem;
+}
+
+.admin-store__voucher-head span {
+  color: var(--brand-cyan-deep);
+  font-weight: 700;
+}
+
+.admin-store__voucher-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-store__voucher-grid small,
+.admin-store__voucher-grid p {
+  margin: 0;
+}
+
+.admin-store__voucher-grid small {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--ink-soft);
+}
+
+.admin-store__voucher-grid p {
+  font-weight: 700;
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.admin-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(19, 33, 41, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.admin-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 720px);
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(233, 246, 249, 0.96));
+  box-shadow: 0 28px 54px rgba(19, 33, 41, 0.22);
+}
+
+.admin-modal__eyebrow {
+  background: rgba(121, 192, 92, 0.16);
+  color: #2f6d1c;
+}
+
+.admin-modal__card h2,
+.admin-modal__message {
+  margin: 0;
+}
+
+.admin-modal__message {
+  color: var(--ink-soft);
+  font-size: 1.04rem;
+}
+
+.admin-modal__grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-modal__grid small {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--ink-soft);
+}
+
+.admin-modal__grid strong {
+  color: var(--brand-teal);
 }
 
 .admin-accounting {
@@ -675,6 +1394,20 @@ function updateAvailability(bikeId: string, availability: BikeItem['availability
   .admin-bike {
     grid-template-columns: 210px minmax(0, 1fr);
     align-items: center;
+  }
+
+  .admin-store__grid {
+    grid-template-columns: minmax(320px, 0.94fr) minmax(380px, 1.06fr);
+  }
+
+  .admin-store__bike {
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .admin-store__voucher-grid,
+  .admin-modal__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .admin-accounting__summary {

@@ -153,7 +153,7 @@ export async function loginUser(payload: LoginPayload) {
   const user = getAllMockUsers().find((entry) => entry.email === email && entry.password === password)
 
   if (!user) {
-    throw new Error('Credenciales inválidas. Usa un acceso de prueba válido para entrar.')
+    throw new Error('Credenciales inválidas. Revisa tu correo y contraseña para continuar.')
   }
 
   const session = buildSession(user)
