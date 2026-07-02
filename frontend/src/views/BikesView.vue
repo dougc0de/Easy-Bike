@@ -211,6 +211,14 @@ function forwardLoginRequest(page: PageId, message?: string) {
   background: #fff;
 }
 
+.bikes-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/images/hero1.jpg') center / cover no-repeat;
+  opacity: 0.4;
+}
+
 .bikes-hero__corner,
 .bikes-catalog__corner {
   position: absolute;
@@ -237,11 +245,28 @@ function forwardLoginRequest(page: PageId, message?: string) {
 
 .bikes-hero__header {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 54rem;
 }
 
+.bikes-hero .eyebrow,
+.bikes-hero .section-copy,
+.bikes-hero__metric span,
+.bikes-hero__metric strong {
+  color: var(--ink-strong);
+}
+
+.bikes-hero .section-copy {
+  width: fit-content;
+  max-width: 58ch;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 28px rgba(19, 33, 41, 0.08);
+}
+
 .bikes-hero__summary {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 1rem;
   margin-top: 1.8rem;
@@ -250,17 +275,14 @@ function forwardLoginRequest(page: PageId, message?: string) {
 .bikes-hero__metric {
   display: grid;
   gap: 0.35rem;
-  padding: 1rem 0 1rem 1rem;
+  padding: 1rem 1rem 1rem 1rem;
   border-left: 4px solid rgba(45, 168, 193, 0.92);
-  background: linear-gradient(90deg, rgba(247, 250, 251, 0.98), rgba(247, 250, 251, 0.4));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(247, 250, 251, 0.56));
+  box-shadow: 0 14px 28px rgba(19, 33, 41, 0.08);
 }
 
 .bikes-hero__metric strong {
   font-size: 1.15rem;
-}
-
-.bikes-hero__metric span {
-  color: var(--ink-soft);
 }
 
 .bikes-catalog {

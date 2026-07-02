@@ -99,6 +99,14 @@ const emit = defineEmits<{
   background: #fff;
 }
 
+.about-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/images/hero2.jpg') center / cover no-repeat;
+  opacity: 0.4;
+}
+
 .about-hero__corner,
 .about-process__corner {
   position: absolute;
@@ -124,6 +132,8 @@ const emit = defineEmits<{
 }
 
 .about-hero__grid {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 2rem;
   align-items: center;
@@ -135,6 +145,20 @@ const emit = defineEmits<{
   display: grid;
   gap: 1rem;
   max-width: 54rem;
+}
+
+.about-hero .eyebrow,
+.about-hero .section-copy,
+.about-hero__focus p {
+  color: var(--ink-strong);
+}
+
+.about-hero .section-copy {
+  width: fit-content;
+  max-width: 58ch;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 28px rgba(19, 33, 41, 0.08);
 }
 
 .about-hero__actions {
@@ -149,18 +173,15 @@ const emit = defineEmits<{
   z-index: 1;
   display: grid;
   gap: 0.85rem;
-  padding: 1.35rem 0 1.35rem 1.35rem;
+  padding: 1.35rem 1.25rem 1.35rem 1.35rem;
   border-left: 4px solid var(--brand-orange);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.3));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.58));
+  box-shadow: 0 16px 30px rgba(19, 33, 41, 0.08);
 }
 
 .about-hero__focus strong,
 .about-hero__focus p {
   margin: 0;
-}
-
-.about-hero__focus p {
-  color: var(--ink-soft);
 }
 
 .about-hero__focus-line {
