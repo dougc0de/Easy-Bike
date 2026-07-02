@@ -294,5 +294,11 @@ async function onSubmit() {
     width: 105px;
     height: 72px;
   }
+
+  .register-form__toggle {
+    padding: 0.72rem 0.85rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+  }
 }
 </style>

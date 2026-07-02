@@ -252,7 +252,10 @@ defineProps<{
   }
 
   .map-section__cta {
-    padding-inline: 1.2rem;
+    gap: 0.5rem;
+    padding: 0.72rem 1rem;
+    border-radius: 11px;
+    font-size: 0.96rem;
   }
 
   .map-section__info {

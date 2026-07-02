@@ -159,6 +159,14 @@ function triggerSessionAction() {
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
+@media (max-width: 979px) {
+  .site-nav__item {
+    padding: 0.72rem 0.85rem;
+    border-radius: 12px;
+    font-size: 0.96rem;
+  }
+}
+
 @media (min-width: 980px) {
   .site-header__inner {
     grid-template-columns: auto 1fr;

@@ -832,9 +832,15 @@ function reserveCurrentBike() {
     padding: 3rem 0;
   }
 
+  .home-hero__actions {
+    gap: 0.8rem;
+  }
+
   .home-hero__button {
-    width: 100%;
+    width: min(100%, 240px);
     min-width: 0;
+    padding: 0.78rem 1.05rem;
+    font-size: 1rem;
   }
 
   .home-reasons__corner--left {
@@ -887,7 +893,15 @@ function reserveCurrentBike() {
 
   .home-bikes__actions {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .home-bikes__reserve,
+  .home-bikes__catalog-link {
+    width: auto;
+    max-width: 100%;
+    font-size: 0.96rem;
   }
 }
 </style>

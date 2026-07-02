@@ -115,10 +115,10 @@ export const locationConfig: LocationConfig = {
   title: 'Encuéntranos fácilmente',
   subtitle:
     'Este bloque ya queda listo para insertar Google Maps desde frontend cuando backend entregue la URL o configuración final.',
-  address: 'Iglesia El Calvario 20 metros al oeste, Leon, Nicaragua',
+  address: 'Iglesia El Calvario, 2 cuadras al sur, en el Barrio El Calvario, León.',
   schedule: 'Lunes a sábado · 8:00 a.m. - 8:00 p.m.',
   ctaLabel: 'Abrir en Google Maps',
-  externalUrl: 'https://www.google.com/maps/search/?api=1&query=Iglesia%20El%20Calvario%2020%20metros%20al%20oeste%2C%20Leon%2C%20Nicaragua',
+  externalUrl: 'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',
   imageUrl: '',
   embedUrl: '',
 }
@@ -153,7 +153,7 @@ export const footerColumns: FooterColumn[] = [
     links: [
       {
         label: 'Google Maps',
-        href: 'https://www.google.com/maps/search/?api=1&query=Iglesia%20El%20Calvario%2020%20metros%20al%20oeste%2C%20Leon%2C%20Nicaragua',
+        href: 'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',
       },
       { label: 'WhatsApp', href: 'https://wa.me/' },
       { label: 'Correo institucional', href: 'mailto:hola@easybike.com' },
