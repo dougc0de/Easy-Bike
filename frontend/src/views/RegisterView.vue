@@ -52,7 +52,7 @@ async function onSubmit() {
   } catch (error) {
     feedbackType.value = 'error'
     feedback.value =
-      error instanceof Error ? error.message : 'No se pudo completar el registro de prueba.'
+      error instanceof Error ? error.message : 'No se pudo completar el registro en este momento.'
   } finally {
     isSubmitting.value = false
   }
@@ -70,13 +70,13 @@ async function onSubmit() {
           <span class="eyebrow">Registrarse</span>
           <h1 class="section-title">Crea tu cuenta y entra directo a tu perfil de cliente.</h1>
           <p class="section-copy">
-            Esta versión queda funcional desde frontend: registra al usuario en almacenamiento local,
-            inicia sesión automáticamente y deja listo el flujo para conectarlo luego al backend.
+            Tu cuenta se crea desde el backend y la sesión se abre automáticamente para que entres
+            directo a tu perfil de cliente.
           </p>
 
           <div class="register-hero__notice">
-            <strong>Registro mock listo para pruebas</strong>
-            <p>Las cuentas creadas aquí viven en el navegador hasta que el backend tome el control del flujo real.</p>
+            <strong>Registro real listo para pruebas</strong>
+            <p>Este formulario ya trabaja con la API para crear usuarios cliente con autenticación real.</p>
           </div>
 
           <div class="register-hero__actions">

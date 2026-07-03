@@ -1,8 +1,15 @@
-import { bikeCatalog, mockUsers } from '../data/siteContent'
-import type { AuthRole, AuthSession, ContactPayload, LoginPayload, MockUser, RegisterPayload, ReservationPayload } from '../types'
+import { bikeCatalog } from '../data/siteContent'
+import type {
+  AuthSession,
+  ContactPayload,
+  LoginPayload,
+  RegisterPayload,
+  ReservationPayload,
+} from '../types'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-const MOCK_USERS_STORAGE_KEY = 'easybike-mock-users'
+const ACCESS_TOKEN_STORAGE_KEY = 'easybike-access-token'
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3000'
 const RESERVATION_SUCCESS_MESSAGE =
   'Reserva simulada correctamente. Tu voucher ya queda listo para mostrarlo al retirar la bicicleta. Recuerda que el pago se hace físicamente al retirar la bicicleta.'
 
@@ -18,94 +25,108 @@ function parseAmount(priceLabel?: string) {
   return matchedValue ? Number(matchedValue[1]) : 0
 }
 
-interface SubmitReservationOptions {
-  bikeName?: string
-  priceLabel?: string
-}
-
-function isAuthRole(value: unknown): value is AuthRole {
-  return value === 'cliente' || value === 'administracion'
-}
-
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
-function isValidMockUser(value: unknown): value is MockUser {
-  if (!value || typeof value !== 'object') return false
-
-  const candidate = value as Partial<MockUser>
-
-  return Boolean(
-    candidate.email &&
-      candidate.password &&
-      candidate.name &&
-      isAuthRole(candidate.role),
-  )
+function getApiUrl(path: string) {
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-function getStoredMockUsers() {
-  if (typeof window === 'undefined') return [] as MockUser[]
+function getStoredAccessToken() {
+  if (typeof window === 'undefined') return ''
 
-  const storedUsers = window.localStorage.getItem(MOCK_USERS_STORAGE_KEY)
-
-  if (!storedUsers) return []
-
-  try {
-    const parsedUsers = JSON.parse(storedUsers) as unknown[]
-
-    if (!Array.isArray(parsedUsers)) {
-      window.localStorage.removeItem(MOCK_USERS_STORAGE_KEY)
-      return []
-    }
-
-    return parsedUsers
-      .filter(isValidMockUser)
-      .map((user) => ({
-        ...user,
-        email: normalizeEmail(user.email),
-      }))
-  } catch {
-    window.localStorage.removeItem(MOCK_USERS_STORAGE_KEY)
-    return []
-  }
+  return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)?.trim() ?? ''
 }
 
-function persistStoredMockUsers(users: MockUser[]) {
+function persistAccessToken(token: string) {
   if (typeof window === 'undefined') return
 
-  window.localStorage.setItem(MOCK_USERS_STORAGE_KEY, JSON.stringify(users))
+  window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token)
 }
 
-function getAllMockUsers() {
-  const mergedUsers = new Map<string, MockUser>()
+export function clearStoredAccessToken() {
+  if (typeof window === 'undefined') return
 
-  for (const user of mockUsers) {
-    const normalizedEmail = normalizeEmail(user.email)
-
-    mergedUsers.set(normalizedEmail, {
-      ...user,
-      email: normalizedEmail,
-    })
-  }
-
-  for (const user of getStoredMockUsers()) {
-    mergedUsers.set(normalizeEmail(user.email), {
-      ...user,
-      email: normalizeEmail(user.email),
-    })
-  }
-
-  return Array.from(mergedUsers.values())
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 
-function buildSession(user: MockUser): AuthSession {
-  return {
-    email: normalizeEmail(user.email),
-    role: user.role,
-    loggedAt: new Date().toISOString(),
-    name: user.name,
+export function hasStoredAccessToken() {
+  return Boolean(getStoredAccessToken())
+}
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  const rawText = await response.text()
+  let parsed: { message?: string | string[] } | null = null
+
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText) as { message?: string | string[] }
+    } catch {
+      parsed = null
+    }
   }
+
+  if (!response.ok) {
+    const message = Array.isArray(parsed?.message)
+      ? parsed.message.join(' ')
+      : parsed?.message || 'No se pudo completar la solicitud al backend.'
+
+    throw new Error(message)
+  }
+
+  return parsed as T
+}
+
+async function apiRequest<T>(path: string, init: RequestInit = {}, useAccessToken = false) {
+  const headers = new Headers(init.headers)
+
+  headers.set('Accept', 'application/json')
+
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  if (useAccessToken) {
+    const accessToken = getStoredAccessToken()
+
+    if (!accessToken) {
+      throw new Error('No existe un access token guardado para continuar.')
+    }
+
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const response = await fetch(getApiUrl(path), {
+    ...init,
+    headers,
+    credentials: 'include',
+  })
+
+  return parseApiResponse<T>(response)
+}
+
+function buildLoginNote(session: AuthSession) {
+  return session.role === 'administracion'
+    ? 'Entrarás al panel administrativo de Easy Bike con autenticación real.'
+    : 'Entrarás a tu perfil de cliente para gestionar reservas con autenticación real.'
+}
+
+interface AuthApiResponse {
+  success: boolean
+  accessToken: string
+  session: AuthSession
+  message: string
+}
+
+interface SessionApiResponse {
+  success: boolean
+  session: AuthSession
+}
+
+interface SubmitReservationOptions {
+  bikeName?: string
+  priceLabel?: string
 }
 
 export async function submitReservation(payload: ReservationPayload, options: SubmitReservationOptions = {}) {
@@ -146,65 +167,82 @@ export async function submitContactMessage(payload: ContactPayload) {
 }
 
 export async function loginUser(payload: LoginPayload) {
-  await wait(650)
+  const result = await apiRequest<AuthApiResponse>(
+    '/auth/login',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        email: normalizeEmail(payload.email),
+        password: payload.password.trim(),
+      }),
+    },
+  )
 
-  const email = normalizeEmail(payload.email)
-  const password = payload.password.trim()
-  const user = getAllMockUsers().find((entry) => entry.email === email && entry.password === password)
-
-  if (!user) {
-    throw new Error('Credenciales inválidas. Revisa tu correo y contraseña para continuar.')
-  }
-
-  const session = buildSession(user)
+  persistAccessToken(result.accessToken)
 
   return {
-    success: true,
-    session,
-    welcome: `Bienvenido, ${user.name}.`,
-    note:
-      user.role === 'administracion'
-        ? 'Entrarás al panel administrativo de prueba con gestión de bicicletas y contabilidad mock.'
-        : 'Entrarás a tu perfil de cliente con reserva, historial y voucher de prueba.',
+    success: result.success,
+    session: result.session,
+    welcome: `Bienvenido, ${result.session.name}.`,
+    note: buildLoginNote(result.session),
   }
 }
 
 export async function registerUser(payload: RegisterPayload) {
-  await wait(700)
+  const result = await apiRequest<AuthApiResponse>(
+    '/auth/registro',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        nombreCompleto: payload.name.trim(),
+        email: normalizeEmail(payload.email),
+        password: payload.password.trim(),
+        confirmPassword: payload.confirmPassword.trim(),
+      }),
+    },
+  )
 
-  const name = payload.name.trim()
-  const email = normalizeEmail(payload.email)
-  const password = payload.password.trim()
-  const confirmPassword = payload.confirmPassword.trim()
-
-  if (!name || !email || !password || !confirmPassword) {
-    throw new Error('Completa todos los campos para crear tu cuenta.')
-  }
-
-  if (password !== confirmPassword) {
-    throw new Error('La confirmación de contraseña no coincide.')
-  }
-
-  const existingUser = getAllMockUsers().find((entry) => entry.email === email)
-
-  if (existingUser) {
-    throw new Error('Ese correo ya está registrado. Inicia sesión o usa otro correo.')
-  }
-
-  const newUser: MockUser = {
-    email,
-    password,
-    role: 'cliente',
-    name,
-    createdAt: new Date().toISOString(),
-  }
-
-  const storedUsers = getStoredMockUsers()
-  persistStoredMockUsers([...storedUsers, newUser])
+  persistAccessToken(result.accessToken)
 
   return {
-    success: true,
-    session: buildSession(newUser),
-    message: 'Tu cuenta quedó creada en el frontend y ya puedes entrar a tu perfil de cliente.',
+    success: result.success,
+    session: result.session,
+    message: result.message,
+  }
+}
+
+export async function fetchCurrentSession() {
+  return apiRequest<SessionApiResponse>('/auth/perfil', { method: 'GET' }, true)
+}
+
+export async function refreshUserSession() {
+  const result = await apiRequest<AuthApiResponse>(
+    '/auth/refresh',
+    {
+      method: 'POST',
+    },
+  )
+
+  persistAccessToken(result.accessToken)
+
+  return {
+    success: result.success,
+    session: result.session,
+    message: result.message,
+  }
+}
+
+export async function logoutUser() {
+  try {
+    const result = await apiRequest<{ success: boolean; message: string }>(
+      '/auth/logout',
+      {
+        method: 'POST',
+      },
+    )
+
+    return result
+  } finally {
+    clearStoredAccessToken()
   }
 }

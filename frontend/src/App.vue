@@ -25,6 +25,12 @@ import {
   loginHighlights,
   navigationItems,
 } from './data/siteContent'
+import {
+  fetchCurrentSession,
+  hasStoredAccessToken,
+  logoutUser,
+  refreshUserSession,
+} from './services/siteApi'
 import type {
   AuthRole,
   AuthSession,
@@ -52,6 +58,7 @@ const routes: Record<PageId, string> = {
 const currentPage = ref<PageId>('inicio')
 const apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3000'
 const authSession = ref<AuthSession | null>(loadAuthSession())
+const appReady = ref(false)
 const bikes = ref<BikeItem[]>(loadStoredCollection(BIKES_STORAGE_KEY, bikeCatalog))
 const reservations = ref<ReservationSummary[]>(
   loadStoredCollection(RESERVATIONS_STORAGE_KEY, initialReservations),
@@ -79,7 +86,9 @@ const headerItems = computed<NavigationItem[]>(() =>
 const headerSessionActionLabel = computed(() => (authSession.value ? 'Cerrar sesión' : undefined))
 
 const homePreviewBikes = computed(() => bikes.value.slice(0, 3))
-const showMapSection = computed(() => currentPage.value === 'inicio' || currentPage.value === 'contactanos')
+const showMapSection = computed(
+  () => appReady.value && (currentPage.value === 'inicio' || currentPage.value === 'contactanos'),
+)
 
 function resolvePage(hash: string): PageId {
   const cleanHash = hash.replace(/^#\//, '').trim()
@@ -220,6 +229,20 @@ function clearAuthSession() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY)
 }
 
+async function bootstrapAuthSession() {
+  try {
+    const result = hasStoredAccessToken()
+      ? await fetchCurrentSession().catch(() => refreshUserSession())
+      : await refreshUserSession()
+
+    authSession.value = result.session
+    persistAuthSession(result.session)
+  } catch {
+    authSession.value = null
+    clearAuthSession()
+  }
+}
+
 function navigateTo(page: PageId) {
   const targetHash = routes[page]
 
@@ -260,7 +283,8 @@ function handleLoginSuccess(session: AuthSession) {
   navigateTo(session.role === 'administracion' ? 'panel-admin' : 'perfil-cliente')
 }
 
-function handleLogout() {
+async function handleLogout() {
+  await logoutUser().catch(() => undefined)
   authSession.value = null
   clearAuthSession()
   loginEntryMessage.value = 'Tu sesión se cerró en este dispositivo.'
@@ -364,10 +388,12 @@ watch(
   { flush: 'post' },
 )
 
-onMounted(() => {
+onMounted(async () => {
+  await bootstrapAuthSession()
   ensureInitialRoute()
   window.addEventListener('hashchange', syncPageWithHash)
   scheduleScrollRevealRegistration()
+  appReady.value = true
 })
 
 onBeforeUnmount(() => {
@@ -390,7 +416,7 @@ onBeforeUnmount(() => {
       @session-action="handleLogout"
     />
 
-    <main class="page-content">
+    <main v-if="appReady" class="page-content">
       <HomeView
         v-if="currentPage === 'inicio'"
         :benefits="homeBenefits"
@@ -460,6 +486,15 @@ onBeforeUnmount(() => {
       />
     </main>
 
+    <main v-else class="page-content">
+      <section class="page-loading">
+        <div class="container">
+          <span class="eyebrow">Easy Bike</span>
+          <h1 class="section-title">Preparando tu sesión.</h1>
+        </div>
+      </section>
+    </main>
+
     <MapSection
       v-if="showMapSection"
       :location="locationConfig"
@@ -473,3 +508,10 @@ onBeforeUnmount(() => {
     />
   </div>
 </template>
+
+<style scoped>
+.page-loading {
+  padding: 8.5rem 0 4rem;
+  background: #fff;
+}
+</style>

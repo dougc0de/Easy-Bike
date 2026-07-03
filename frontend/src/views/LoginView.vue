@@ -43,7 +43,7 @@ async function onSubmit() {
   } catch (error) {
     feedbackType.value = 'error'
     feedback.value =
-      error instanceof Error ? error.message : 'No se pudo completar el inicio de sesión simulado.'
+      error instanceof Error ? error.message : 'No se pudo completar el inicio de sesión en este momento.'
   } finally {
     isSubmitting.value = false
   }
