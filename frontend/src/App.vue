@@ -20,13 +20,14 @@ import {
   footerMeta,
   homeBenefits,
   homeStats,
-  initialReservations,
   locationConfig,
   loginHighlights,
   navigationItems,
 } from './data/siteContent'
 import {
+  fetchBikeCatalog,
   fetchCurrentSession,
+  fetchReservationsForSession,
   hasStoredAccessToken,
   logoutUser,
   refreshUserSession,
@@ -60,9 +61,7 @@ const apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:300
 const authSession = ref<AuthSession | null>(loadAuthSession())
 const appReady = ref(false)
 const bikes = ref<BikeItem[]>(loadStoredCollection(BIKES_STORAGE_KEY, bikeCatalog))
-const reservations = ref<ReservationSummary[]>(
-  loadStoredCollection(RESERVATIONS_STORAGE_KEY, initialReservations),
-)
+const reservations = ref<ReservationSummary[]>(loadStoredCollection(RESERVATIONS_STORAGE_KEY, []))
 const loginEntryMessage = ref('')
 const enableScrollReveal =
   typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -237,9 +236,33 @@ async function bootstrapAuthSession() {
 
     authSession.value = result.session
     persistAuthSession(result.session)
+    await hydrateReservationsFromApi(result.session)
   } catch {
     authSession.value = null
     clearAuthSession()
+    reservations.value = []
+  }
+}
+
+async function hydrateBikesFromApi() {
+  try {
+    bikes.value = await fetchBikeCatalog()
+  } catch (error) {
+    console.error('No se pudo cargar el catálogo desde la API.', error)
+  }
+}
+
+async function hydrateReservationsFromApi(session: AuthSession | null) {
+  if (!session) {
+    reservations.value = []
+    return
+  }
+
+  try {
+    reservations.value = await fetchReservationsForSession(session)
+  } catch (error) {
+    reservations.value = []
+    console.error('No se pudieron cargar las reservas desde la API.', error)
   }
 }
 
@@ -276,10 +299,11 @@ function requestLogin(_page: PageId, message = 'Para reservar primero debes inic
   navigateTo('login')
 }
 
-function handleLoginSuccess(session: AuthSession) {
+async function handleLoginSuccess(session: AuthSession) {
   authSession.value = session
   persistAuthSession(session)
   loginEntryMessage.value = ''
+  await Promise.all([hydrateBikesFromApi(), hydrateReservationsFromApi(session)])
   navigateTo(session.role === 'administracion' ? 'panel-admin' : 'perfil-cliente')
 }
 
@@ -287,16 +311,20 @@ async function handleLogout() {
   await logoutUser().catch(() => undefined)
   authSession.value = null
   clearAuthSession()
+  reservations.value = []
   loginEntryMessage.value = 'Tu sesión se cerró en este dispositivo.'
   navigateTo('login')
 }
 
 function handleReservationCreated(reservation: ReservationSummary) {
-  reservations.value = [reservation, ...reservations.value]
+  reservations.value = [
+    reservation,
+    ...reservations.value.filter((currentReservation) => currentReservation.id !== reservation.id),
+  ]
 }
 
 function handleBikeCreated(bike: BikeItem) {
-  bikes.value = [bike, ...bikes.value]
+  bikes.value = [bike, ...bikes.value.filter((currentBike) => currentBike.id !== bike.id)]
 }
 
 function handleAvailabilityUpdated(payload: {
@@ -389,6 +417,7 @@ watch(
 )
 
 onMounted(async () => {
+  await hydrateBikesFromApi()
   await bootstrapAuthSession()
   ensureInitialRoute()
   window.addEventListener('hashchange', syncPageWithHash)

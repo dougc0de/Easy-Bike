@@ -1,28 +1,88 @@
-import { bikeCatalog } from '../data/siteContent'
 import type {
   AuthSession,
+  BikeItem,
   ContactPayload,
   LoginPayload,
   RegisterPayload,
   ReservationPayload,
+  ReservationSummary,
 } from '../types'
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const ACCESS_TOKEN_STORAGE_KEY = 'easybike-access-token'
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3000'
-const RESERVATION_SUCCESS_MESSAGE =
-  'Reserva simulada correctamente. Tu voucher ya queda listo para mostrarlo al retirar la bicicleta. Recuerda que el pago se hace físicamente al retirar la bicicleta.'
+const BACKEND_UNAVAILABLE_MESSAGE =
+  'No se pudo conectar con el backend de Easy Bike. Verifica que Render esté activo e inténtalo nuevamente.'
 
-function formatDuration(duration: string) {
-  return duration.includes('hora') ? duration : `${duration} horas`
+interface AuthApiResponse {
+  success: boolean
+  accessToken: string
+  session: AuthSession
+  message: string
 }
 
-function parseAmount(priceLabel?: string) {
-  if (!priceLabel) return 0
+interface SessionApiResponse {
+  success: boolean
+  session: AuthSession
+}
 
-  const matchedValue = priceLabel.match(/\$ ?(\d+(?:\.\d+)?)/)
+interface BikeApiResponse {
+  id: string
+  name: string
+  category: string
+  shortDescription: string
+  detail: string
+  price: string
+  autonomy: string
+  availability: BikeItem['availability']
+  accent: string
+  recommendedFor: string
+  imageUrl: string
+  imageAlt: string
+}
 
-  return matchedValue ? Number(matchedValue[1]) : 0
+interface ReservationApiResponse {
+  id: string
+  customerName: string
+  customerEmail: string
+  bikeId: string
+  bikeName: string
+  date: string
+  time: string
+  duration: string
+  pickupPoint: string
+  amount: number
+  status: ReservationSummary['status']
+  voucherCode: string
+  paymentMethod: string
+  createdAt: string
+}
+
+interface ReservationMutationResponse {
+  success: boolean
+  code: string
+  amount: number
+  voucher: {
+    code: string
+    bikeName: string
+    date: string
+    time: string
+    duration: string
+    pickupPoint: string
+    paymentMethod: string
+    note: string
+  }
+  message: string
+  reservation: ReservationApiResponse
+}
+
+interface ContactApiResponse {
+  success: boolean
+  ticket: string
+  message: string
+}
+
+interface SubmitReservationOptions {
+  mode?: 'cliente' | 'admin-store'
 }
 
 function normalizeEmail(email: string) {
@@ -45,14 +105,46 @@ function persistAccessToken(token: string) {
   window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token)
 }
 
-export function clearStoredAccessToken() {
-  if (typeof window === 'undefined') return
-
-  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+function mapApiBike(bike: BikeApiResponse): BikeItem {
+  return {
+    id: bike.id,
+    name: bike.name,
+    category: bike.category,
+    shortDescription: bike.shortDescription,
+    detail: bike.detail,
+    price: bike.price,
+    autonomy: bike.autonomy,
+    availability: bike.availability,
+    accent: bike.accent,
+    recommendedFor: bike.recommendedFor,
+    imageUrl: bike.imageUrl,
+    imageAlt: bike.imageAlt,
+  }
 }
 
-export function hasStoredAccessToken() {
-  return Boolean(getStoredAccessToken())
+function mapApiReservation(reservation: ReservationApiResponse): ReservationSummary {
+  return {
+    id: reservation.id,
+    customerName: reservation.customerName,
+    customerEmail: reservation.customerEmail,
+    bikeId: reservation.bikeId,
+    bikeName: reservation.bikeName,
+    date: reservation.date,
+    time: reservation.time,
+    duration: reservation.duration,
+    pickupPoint: reservation.pickupPoint,
+    amount: reservation.amount,
+    status: reservation.status,
+    voucherCode: reservation.voucherCode,
+    paymentMethod: reservation.paymentMethod,
+    createdAt: reservation.createdAt,
+  }
+}
+
+function buildLoginNote(session: AuthSession) {
+  return session.role === 'administracion'
+    ? 'Entrarás al panel administrativo de Easy Bike con autenticación real.'
+    : 'Entrarás a tu perfil de cliente para gestionar reservas con autenticación real.'
 }
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
@@ -97,73 +189,134 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, useAccessToke
     headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
-  const response = await fetch(getApiUrl(path), {
-    ...init,
-    headers,
-    credentials: 'include',
-  })
+  let response: Response
+
+  try {
+    response = await fetch(getApiUrl(path), {
+      ...init,
+      headers,
+      credentials: 'include',
+    })
+  } catch (error) {
+    if (error instanceof Error && /fetch|network/i.test(error.message)) {
+      throw new Error(BACKEND_UNAVAILABLE_MESSAGE)
+    }
+
+    throw error
+  }
 
   return parseApiResponse<T>(response)
 }
 
-function buildLoginNote(session: AuthSession) {
-  return session.role === 'administracion'
-    ? 'Entrarás al panel administrativo de Easy Bike con autenticación real.'
-    : 'Entrarás a tu perfil de cliente para gestionar reservas con autenticación real.'
+export function clearStoredAccessToken() {
+  if (typeof window === 'undefined') return
+
+  window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
 }
 
-interface AuthApiResponse {
-  success: boolean
-  accessToken: string
-  session: AuthSession
-  message: string
+export function hasStoredAccessToken() {
+  return Boolean(getStoredAccessToken())
 }
 
-interface SessionApiResponse {
-  success: boolean
-  session: AuthSession
+export async function fetchBikeCatalog() {
+  const result = await apiRequest<BikeApiResponse[]>('/bicicletas?limit=1000&offset=0', {
+    method: 'GET',
+  })
+
+  return result.map((bike) => mapApiBike(bike))
 }
 
-interface SubmitReservationOptions {
-  bikeName?: string
-  priceLabel?: string
+export async function fetchReservationsForSession(session: AuthSession) {
+  const endpoint =
+    session.role === 'administracion'
+      ? '/admin/reservas?limit=1000&offset=0'
+      : '/reservas?limit=1000&offset=0'
+  const result = await apiRequest<ReservationApiResponse[]>(endpoint, { method: 'GET' }, true)
+
+  return result.map((reservation) => mapApiReservation(reservation))
 }
 
 export async function submitReservation(payload: ReservationPayload, options: SubmitReservationOptions = {}) {
-  await wait(900)
-
-  const bike = bikeCatalog.find((item) => item.id === payload.bikeId)
-  const code = `RSV-${payload.bikeId.toUpperCase()}-${Date.now().toString().slice(-4)}`
-  const bikeName = options.bikeName ?? bike?.name ?? 'Bicicleta Easy Bike'
-  const duration = formatDuration(payload.duration)
-  const amount = parseAmount(options.priceLabel ?? bike?.price)
+  const endpoint = options.mode === 'admin-store' ? '/admin/reservas-en-tienda' : '/reservas'
+  const result = await apiRequest<ReservationMutationResponse>(
+    endpoint,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        fullName: payload.fullName.trim(),
+        email: normalizeEmail(payload.email),
+        phone: payload.phone.trim(),
+        bikeId: payload.bikeId,
+        date: payload.date,
+        time: payload.time,
+        duration: Number(payload.duration),
+        pickupPoint: payload.pickupPoint.trim(),
+        notes: payload.notes.trim(),
+      }),
+    },
+    true,
+  )
 
   return {
-    success: true,
-    code,
-    amount,
-    voucher: {
-      code,
-      bikeName,
-      date: payload.date,
-      time: payload.time,
-      duration,
-      pickupPoint: payload.pickupPoint,
-      paymentMethod: 'Pago físico al retirar la bicicleta',
-      note: 'Presenta este voucher al retirar tu bicicleta. El pago se completa físicamente en el punto de recojo.',
-    },
-    message: RESERVATION_SUCCESS_MESSAGE,
+    ...result,
+    reservation: mapApiReservation(result.reservation),
   }
 }
 
 export async function submitContactMessage(payload: ContactPayload) {
-  await wait(700)
+  return apiRequest<ContactApiResponse>('/contactos', {
+    method: 'POST',
+    body: JSON.stringify({
+      nombre: payload.name.trim(),
+      email: normalizeEmail(payload.email),
+      asunto: payload.subject.trim(),
+      mensaje: payload.message.trim(),
+    }),
+  })
+}
 
-  return {
-    success: true,
-    ticket: `MSG-${Date.now().toString().slice(-5)}`,
-    message: `Gracias ${payload.name}, tu mensaje quedó registrado en el frontend.`,
-  }
+export async function createBikeRecord(bike: Omit<BikeItem, 'id'>) {
+  const result = await apiRequest<BikeApiResponse>(
+    '/bicicletas',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        nombre: bike.name.trim(),
+        categoria: bike.category.trim(),
+        descripcionCorta: bike.shortDescription.trim(),
+        detalle: bike.detail.trim(),
+        precio: bike.price.trim(),
+        autonomia: bike.autonomy.trim(),
+        disponibilidad: bike.availability,
+        colorAcento: bike.accent.trim(),
+        recomendadoPara: bike.recommendedFor.trim(),
+        urlImagen: bike.imageUrl.trim(),
+        textoAlternativoImagen: bike.imageAlt.trim(),
+        activo: true,
+      }),
+    },
+    true,
+  )
+
+  return mapApiBike(result)
+}
+
+export async function updateBikeAvailabilityStatus(
+  bikeId: string,
+  availability: BikeItem['availability'],
+) {
+  const result = await apiRequest<BikeApiResponse>(
+    `/admin/bicicletas/${bikeId}/disponibilidad`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        disponibilidad: availability,
+      }),
+    },
+    true,
+  )
+
+  return mapApiBike(result)
 }
 
 export async function loginUser(payload: LoginPayload) {

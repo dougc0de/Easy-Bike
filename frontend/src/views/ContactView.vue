@@ -31,9 +31,10 @@ async function onSubmit() {
     const result = await submitContactMessage({ ...form })
     feedbackType.value = 'success'
     feedback.value = `${result.message} Ticket: ${result.ticket}.`
-  } catch {
+  } catch (error) {
     feedbackType.value = 'error'
-    feedback.value = 'No se pudo registrar tu mensaje en esta simulación.'
+    feedback.value =
+      error instanceof Error ? error.message : 'No se pudo registrar tu mensaje en este momento.'
   } finally {
     isSending.value = false
   }

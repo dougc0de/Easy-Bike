@@ -199,30 +199,9 @@ async function onSubmit() {
         email: props.session.email,
         bikeId: selectedBike.value.id,
       },
-      {
-        bikeName: selectedBike.value.name,
-        priceLabel: selectedBike.value.price,
-      },
     )
 
-    const reservation: ReservationSummary = {
-      id: `reservation-${Date.now()}`,
-      customerName: form.fullName,
-      customerEmail: props.session.email,
-      bikeId: selectedBike.value.id,
-      bikeName: selectedBike.value.name,
-      date: form.date,
-      time: form.time,
-      duration: result.voucher.duration,
-      pickupPoint: form.pickupPoint,
-      amount: result.amount,
-      status: 'Pendiente de entrega',
-      voucherCode: result.voucher.code,
-      paymentMethod: result.voucher.paymentMethod,
-      createdAt: new Date().toISOString(),
-    }
-
-    emit('reservationCreated', reservation)
+    emit('reservationCreated', result.reservation)
     generatedVoucher.value = result.voucher
     successModal.value = {
       message: result.message,
@@ -236,7 +215,7 @@ async function onSubmit() {
   } catch (error) {
     feedbackType.value = 'error'
     feedback.value =
-      error instanceof Error ? error.message : 'No se pudo procesar la reserva de prueba en este momento.'
+      error instanceof Error ? error.message : 'No se pudo procesar la reserva en este momento.'
   } finally {
     isSubmitting.value = false
   }

@@ -120,9 +120,10 @@ async function onSubmit() {
     const result = await submitReservation({ ...form })
     feedbackType.value = 'success'
     feedback.value = `${result.message} Código de referencia: ${result.code}.`
-  } catch {
+  } catch (error) {
     feedbackType.value = 'error'
-    feedback.value = 'No fue posible procesar la reserva simulada. Inténtalo nuevamente.'
+    feedback.value =
+      error instanceof Error ? error.message : 'No fue posible procesar la reserva en este momento.'
   } finally {
     isSubmitting.value = false
   }

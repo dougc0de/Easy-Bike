@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { submitReservation } from '../services/siteApi'
+import {
+  createBikeRecord,
+  submitReservation,
+  updateBikeAvailabilityStatus,
+} from '../services/siteApi'
 import type {
   AuthSession,
   BikeItem,
@@ -186,15 +190,6 @@ function getReservationStatusClass(status: ReservationSummary['status']) {
   return 'is-upcoming'
 }
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
 function pickAccent(category: string) {
   const normalizedCategory = category.toLowerCase()
 
@@ -253,8 +248,7 @@ async function onSubmit() {
     const shortDescription =
       baseDescription.length > 92 ? `${baseDescription.slice(0, 89).trim()}...` : baseDescription
 
-    const bike: BikeItem = {
-      id: `${slugify(bikeForm.name)}-${Date.now().toString().slice(-4)}`,
+    const bikeDraft: Omit<BikeItem, 'id'> = {
       name: bikeForm.name.trim(),
       category: bikeForm.category.trim(),
       shortDescription,
@@ -268,9 +262,10 @@ async function onSubmit() {
       imageAlt: `${bikeForm.name.trim()} Easy Bike`,
     }
 
+    const bike = await createBikeRecord(bikeDraft)
     emit('bikeCreated', bike)
     bikeFeedbackType.value = 'success'
-    bikeFeedback.value = 'La bicicleta quedó agregada al catálogo mock y ya se refleja en el frontend.'
+    bikeFeedback.value = 'La bicicleta quedó registrada en el backend y ya se refleja en el frontend.'
 
     bikeForm.name = ''
     bikeForm.category = 'Urbana'
@@ -279,13 +274,31 @@ async function onSubmit() {
     bikeForm.availability = 'Disponible'
     bikeForm.description = ''
     bikeForm.imageUrl = ''
+  } catch (error) {
+    bikeFeedbackType.value = 'error'
+    bikeFeedback.value =
+      error instanceof Error ? error.message : 'No se pudo registrar la bicicleta en este momento.'
   } finally {
     isSavingBike.value = false
   }
 }
 
-function updateAvailability(bikeId: string, availability: BikeItem['availability']) {
-  emit('availabilityUpdated', { bikeId, availability })
+async function updateAvailability(bikeId: string, availability: BikeItem['availability']) {
+  try {
+    const updatedBike = await updateBikeAvailabilityStatus(bikeId, availability)
+
+    emit('availabilityUpdated', {
+      bikeId: updatedBike.id,
+      availability: updatedBike.availability,
+    })
+
+    bikeFeedbackType.value = 'success'
+    bikeFeedback.value = `La disponibilidad de ${updatedBike.name} quedó actualizada a ${updatedBike.availability}.`
+  } catch (error) {
+    bikeFeedbackType.value = 'error'
+    bikeFeedback.value =
+      error instanceof Error ? error.message : 'No se pudo actualizar la disponibilidad en este momento.'
+  }
 }
 
 async function onStoreReservationSubmit() {
@@ -322,30 +335,10 @@ async function onStoreReservationSubmit() {
         email: storeReservationForm.email.trim().toLowerCase(),
         bikeId: selectedReservationBike.value.id,
       },
-      {
-        bikeName: selectedReservationBike.value.name,
-        priceLabel: selectedReservationBike.value.price,
-      },
+      { mode: 'admin-store' },
     )
 
-    const reservation: ReservationSummary = {
-      id: `reservation-${Date.now()}`,
-      customerName: storeReservationForm.fullName.trim(),
-      customerEmail: storeReservationForm.email.trim().toLowerCase(),
-      bikeId: selectedReservationBike.value.id,
-      bikeName: selectedReservationBike.value.name,
-      date: storeReservationForm.date,
-      time: storeReservationForm.time,
-      duration: result.voucher.duration,
-      pickupPoint: storeReservationForm.pickupPoint,
-      amount: result.amount,
-      status: 'Pendiente de entrega',
-      voucherCode: result.voucher.code,
-      paymentMethod: result.voucher.paymentMethod,
-      createdAt: new Date().toISOString(),
-    }
-
-    emit('reservationCreated', reservation)
+    emit('reservationCreated', result.reservation)
     generatedVoucher.value = result.voucher
     successModal.value = {
       message: result.message,
@@ -382,12 +375,12 @@ async function onStoreReservationSubmit() {
           <h1 class="section-title">Gestión central para {{ session.name }}.</h1>
           <p class="section-copy">
             Desde aquí el equipo puede cargar bicicletas, volverlas a poner disponibles después de
-            la entrega y seguir el movimiento contable generado por las reservas mock.
+            la entrega y seguir el movimiento contable generado por las reservas registradas.
           </p>
 
           <div class="admin-hero__notice">
             <strong>Flujo listo para pruebas del equipo</strong>
-            <p>Todo funciona en frontend con persistencia local para que el resto del equipo pueda continuar.</p>
+            <p>El panel ya quedó conectado a la API para que el resto del equipo continúe sobre una base real.</p>
           </div>
         </div>
 
@@ -473,7 +466,7 @@ async function onStoreReservationSubmit() {
           </div>
 
           <p class="helper-text">
-            Este formulario genera un nuevo registro mock y lo deja visible también en las vistas públicas del sitio.
+            Este formulario registra la bicicleta en backend y la deja visible también en las vistas públicas del sitio.
           </p>
 
           <div v-if="bikeFeedback" class="feedback" :class="bikeFeedbackType === 'success' ? 'is-success' : 'is-error'">
@@ -768,7 +761,7 @@ async function onStoreReservationSubmit() {
         <div class="admin-accounting__summary">
           <article class="admin-accounting__card">
             <strong>{{ formatCurrency(totalRevenue) }}</strong>
-            <span>Total acumulado por reservas mock</span>
+            <span>Total acumulado por reservas registradas</span>
           </article>
           <article class="admin-accounting__card">
             <strong>{{ props.reservations.length }}</strong>
