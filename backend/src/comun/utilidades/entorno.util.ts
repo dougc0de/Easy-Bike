@@ -36,10 +36,16 @@ export function normalizarOrigenHttp(nombre: string, valor: string | undefined):
     return undefined;
   }
 
+  const valorNormalizado = /^[a-z]+:\/\//i.test(valor)
+    ? valor
+    : valor.startsWith('localhost') || valor.startsWith('127.0.0.1')
+      ? `http://${valor}`
+      : `https://${valor}`;
+
   let url: URL;
 
   try {
-    url = new URL(valor);
+    url = new URL(valorNormalizado);
   } catch {
     throw new Error(`${nombre} debe ser una URL válida con protocolo http o https.`);
   }
