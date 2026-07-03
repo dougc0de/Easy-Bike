@@ -10,10 +10,12 @@ import { crearOpcionesTypeOrm } from './typeorm.config';
 export class BaseDatosModule {
   static registrar(): DynamicModule {
     const modo = obtenerModoDatos();
+    const databaseUrl = process.env.DATABASE_URL?.trim();
+    const databaseUrlPooler = process.env.DATABASE_URL_POOLER?.trim();
 
-    if (modo === 'typeorm' && !process.env.DATABASE_URL?.trim()) {
+    if (modo === 'typeorm' && !databaseUrl && !databaseUrlPooler) {
       throw new Error(
-        'MODO_DATOS=typeorm requiere DATABASE_URL. Completa la conexión con Supabase antes de iniciar.',
+        'MODO_DATOS=typeorm requiere DATABASE_URL o DATABASE_URL_POOLER. Completa la conexión con Supabase antes de iniciar.',
       );
     }
 

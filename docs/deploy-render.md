@@ -40,5 +40,5 @@
 ## 5. Supabase
 - Ve a `SQL Editor`.
 - Pega y ejecuta el contenido de `database/script.sql`.
-- Si Render no conecta bien usando el host directo `:5432`, coloca la cadena pooler en `DATABASE_URL`.
-  - Es decir: el backend usa `DATABASE_URL`, así que si necesitas pooler, pega ahí la URL pooler.
+- Si Render no conecta bien usando el host directo `:5432`, completa `DATABASE_URL_POOLER`.
+  - El backend ya prioriza `DATABASE_URL_POOLER` cuando existe, así que no necesitas reemplazar `DATABASE_URL`.

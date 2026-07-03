@@ -12,7 +12,19 @@ export class BaseDatosService {
   }
 
   estaConfigurada(): boolean {
-    return Boolean(process.env.DATABASE_URL?.trim());
+    return Boolean(process.env.DATABASE_URL_POOLER?.trim() || process.env.DATABASE_URL?.trim());
+  }
+
+  obtenerTipoConexionConfigurada(): 'pooler' | 'directa' | 'ninguna' {
+    if (process.env.DATABASE_URL_POOLER?.trim()) {
+      return 'pooler';
+    }
+
+    if (process.env.DATABASE_URL?.trim()) {
+      return 'directa';
+    }
+
+    return 'ninguna';
   }
 
   estaInicializada(): boolean {
@@ -22,7 +34,7 @@ export class BaseDatosService {
   obtenerDataSource(): DataSource {
     if (!this.dataSource) {
       throw new ServiceUnavailableException(
-        'El DataSource de TypeORM no está disponible. Verifica MODO_DATOS y DATABASE_URL.',
+        'El DataSource de TypeORM no está disponible. Verifica MODO_DATOS y la conexión DATABASE_URL o DATABASE_URL_POOLER.',
       );
     }
 
