@@ -25,10 +25,35 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
 
     const dataSource = this.baseDatosService.obtenerDataSource();
 
+    await this.normalizarEsquemaUsuariosLegado();
     await this.sembrarUsuarios(dataSource.getRepository(UsuarioEntidad));
     await this.sembrarBicicletas(dataSource.getRepository(BicicletaEntidad));
     await this.sembrarReservas(dataSource.getRepository(ReservaEntidad));
     await this.sembrarUbicaciones(dataSource.getRepository(ConfiguracionUbicacionEntidad));
+  }
+
+  private async normalizarEsquemaUsuariosLegado() {
+    const dataSource = this.baseDatosService.obtenerDataSource();
+
+    await dataSource.query(`
+      alter table if exists public.usuarios
+      add column if not exists password_hash text;
+    `);
+
+    await dataSource.query(`
+      alter table if exists public.usuarios
+      add column if not exists refresh_token_hash text;
+    `);
+
+    await dataSource.query(`
+      alter table if exists public.usuarios
+      add column if not exists activo boolean not null default true;
+    `);
+
+    await dataSource.query(`
+      alter table if exists public.usuarios
+      add column if not exists ultimo_acceso_at timestamptz;
+    `);
   }
 
   private async sembrarUsuarios(repositorio: Repository<UsuarioEntidad>) {

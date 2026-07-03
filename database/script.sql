@@ -105,6 +105,23 @@ create table if not exists public.configuraciones_ubicacion (
 );
 
 -- =========================================================
+-- 2.1. Compatibilidad con esquemas previos
+-- =========================================================
+-- Si la tabla usuarios ya existía desde una versión anterior,
+-- estos ALTER TABLE agregan las columnas necesarias para auth real.
+alter table if exists public.usuarios
+  add column if not exists password_hash text;
+
+alter table if exists public.usuarios
+  add column if not exists refresh_token_hash text;
+
+alter table if exists public.usuarios
+  add column if not exists activo boolean not null default true;
+
+alter table if exists public.usuarios
+  add column if not exists ultimo_acceso_at timestamptz;
+
+-- =========================================================
 -- 3. Índices sugeridos
 -- =========================================================
 create index if not exists idx_usuarios_email on public.usuarios(email);
