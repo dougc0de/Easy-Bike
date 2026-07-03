@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { BaseDatosService } from './base-datos/base-datos.service';
 import {
+  esOrigenCorsPermitido,
   obtenerResumenConfiguracionArranque,
   validarConfiguracionCriticaProduccion,
 } from './comun/utilidades/entorno.util';
@@ -34,7 +35,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || origins.includes(origin)) {
+      if (!origin || esOrigenCorsPermitido(origin)) {
         callback(null, true);
         return;
       }

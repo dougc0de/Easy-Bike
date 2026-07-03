@@ -1,5 +1,6 @@
 export type ModoDatos = 'memoria' | 'typeorm';
 export type TipoConexionBaseDatos = 'pooler' | 'directa' | 'ninguna';
+const PATRON_PREVIEW_VERCEL_EASY_BIKE = /^https:\/\/easy-bike-[a-z0-9-]+\.vercel\.app$/i;
 
 export function obtenerVariableEntorno(nombre: string): string | undefined {
   const valor = process.env[nombre]?.trim();
@@ -68,6 +69,14 @@ export function obtenerOrigenesCorsPermitidos(): string[] {
       ];
 
   return Array.from(new Set(origenes.filter((origen): origen is string => Boolean(origen))));
+}
+
+export function esOrigenCorsPermitido(origen: string): boolean {
+  if (obtenerOrigenesCorsPermitidos().includes(origen)) {
+    return true;
+  }
+
+  return esProduccion() && PATRON_PREVIEW_VERCEL_EASY_BIKE.test(origen);
 }
 
 export function obtenerConfiguracionConexionBaseDatos(): {

@@ -6,6 +6,7 @@ import {
   obtenerModoDatos,
 } from '../comun/utilidades/entorno.util';
 import { BaseDatosService } from './base-datos.service';
+import { InicializacionDatosService } from './inicializacion-datos.service';
 import { crearOpcionesTypeOrm } from './typeorm.config';
 
 @Global()
@@ -32,7 +33,7 @@ export class BaseDatosModule {
               }),
             ]
           : [],
-      providers: [BaseDatosService],
+      providers: [BaseDatosService, InicializacionDatosService],
       exports: [BaseDatosService],
     };
   }
