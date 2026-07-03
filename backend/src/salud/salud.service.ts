@@ -40,7 +40,7 @@ export class SaludService {
           : configurada
             ? tipoConexion === 'pooler'
               ? 'TypeORM está configurado con Supabase usando la conexión pooler, ideal para despliegues como Render.'
-              : 'TypeORM está configurado para PostgreSQL/Supabase con conexión directa. Si Render falla por red, usa DATABASE_URL_POOLER.'
+              : 'TypeORM está configurado para PostgreSQL/Supabase con conexión directa. Usa DATABASE_URL_POOLER en Render solo si la red no alcanza la conexión directa.'
             : 'Falta completar DATABASE_URL o DATABASE_URL_POOLER para habilitar la conexión TypeORM con Supabase.',
     };
   }

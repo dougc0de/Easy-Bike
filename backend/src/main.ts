@@ -1,17 +1,37 @@
 import 'dotenv/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { BaseDatosService } from './base-datos/base-datos.service';
+import {
+  obtenerResumenConfiguracionArranque,
+  validarConfiguracionCriticaProduccion,
+} from './comun/utilidades/entorno.util';
 
 async function bootstrap() {
+  validarConfiguracionCriticaProduccion();
+
+  const logger = new Logger('Bootstrap');
+  const resumenArranque = obtenerResumenConfiguracionArranque();
+
+  logger.log(
+    `Modo de datos configurado: ${resumenArranque.modoDatos}. Producción: ${resumenArranque.produccion ? 'sí' : 'no'}.`,
+  );
+  logger.log(
+    `Conexión de base de datos seleccionada: ${resumenArranque.tipoConexionBaseDatos}.`,
+  );
+  logger.log(`Orígenes CORS permitidos: ${resumenArranque.origenesCors.join(', ')}.`);
+
   const app = await NestFactory.create(AppModule);
-  const origins = [process.env.FRONTEND_URL, process.env.FRONTEND_URL_PROD]
-    .map((origin) => origin?.trim())
-    .filter((origin): origin is string => Boolean(origin));
+  const configService = app.get(ConfigService);
+  const baseDatosService = app.get(BaseDatosService);
+  const puerto = Number(configService.get<string>('PORT')?.trim() || '3000');
+  const origins = resumenArranque.origenesCors;
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || !origins.length || origins.includes(origin)) {
+      if (!origin || origins.includes(origin)) {
         callback(null, true);
         return;
       }
@@ -31,6 +51,10 @@ async function bootstrap() {
 
   app.setGlobalPrefix('');
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(puerto, '0.0.0.0');
+
+  logger.log(
+    `Backend escuchando en 0.0.0.0:${puerto} con conexión ${baseDatosService.obtenerTipoConexionConfigurada()}.`,
+  );
 }
 bootstrap();

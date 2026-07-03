@@ -1,7 +1,10 @@
 import { Injectable, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { obtenerModoDatos } from '../comun/utilidades/entorno.util';
+import {
+  obtenerConfiguracionConexionBaseDatos,
+  obtenerModoDatos,
+} from '../comun/utilidades/entorno.util';
 
 @Injectable()
 export class BaseDatosService {
@@ -12,19 +15,11 @@ export class BaseDatosService {
   }
 
   estaConfigurada(): boolean {
-    return Boolean(process.env.DATABASE_URL_POOLER?.trim() || process.env.DATABASE_URL?.trim());
+    return Boolean(obtenerConfiguracionConexionBaseDatos().url);
   }
 
   obtenerTipoConexionConfigurada(): 'pooler' | 'directa' | 'ninguna' {
-    if (process.env.DATABASE_URL_POOLER?.trim()) {
-      return 'pooler';
-    }
-
-    if (process.env.DATABASE_URL?.trim()) {
-      return 'directa';
-    }
-
-    return 'ninguna';
+    return obtenerConfiguracionConexionBaseDatos().tipoConexion;
   }
 
   estaInicializada(): boolean {

@@ -21,6 +21,7 @@ import { RegistroDto } from './dto/registro.dto';
 import { JwtAccessGuard } from './guards/jwt-access.guard';
 import type { Request, Response } from 'express';
 import type { UsuarioAutenticado } from './interfaces/usuario-autenticado.interface';
+import { esProduccion, normalizarOrigenHttp } from '../comun/utilidades/entorno.util';
 
 @Controller('auth')
 export class AutenticacionController {
@@ -107,14 +108,18 @@ export class AutenticacionController {
   }
 
   private obtenerOpcionesCookie() {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL')?.trim() ?? '';
-    const origenSeguro = frontendUrl.startsWith('https://');
-    const secure = origenSeguro || process.env.NODE_ENV === 'production';
+    const frontendUrl = normalizarOrigenHttp(
+      'FRONTEND_URL',
+      this.configService.get<string>('FRONTEND_URL'),
+    );
+    const origenSeguro = frontendUrl?.startsWith('https://') ?? false;
+    const secure = esProduccion() || origenSeguro;
+    const sameSite = esProduccion() ? 'none' : secure ? 'none' : 'lax';
 
     return {
       httpOnly: true,
       secure,
-      sameSite: (secure ? 'none' : 'lax') as 'none' | 'lax',
+      sameSite: sameSite as 'none' | 'lax',
       path: '/',
       maxAge: DURACION_REFRESH_TOKEN_MS,
     };

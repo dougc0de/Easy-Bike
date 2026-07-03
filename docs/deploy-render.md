@@ -4,9 +4,12 @@
 - `frontend/.env.production`
   - `VITE_API_URL=https://easy-bike-pwsd.onrender.com`
 - Panel de Render > Environment
+  - `NODE_ENV=production`
+  - `MODO_DATOS=typeorm`
+  - `DB_SSL=true`
   - `FRONTEND_URL=https://easy-bike-ten.vercel.app`
-  - `DATABASE_URL=...`
-  - `DATABASE_URL_POOLER=...`
+  - `DATABASE_URL_POOLER=...` (recomendada y prioritaria en Render)
+  - `DATABASE_URL=...` (opcional como respaldo)
   - `SUPABASE_PROJECT_REF=...`
   - `SUPABASE_URL=...`
   - `SUPABASE_ANON_KEY=...`
@@ -31,6 +34,7 @@
 4. Render leerá `render.yaml`.
 5. Completa las variables marcadas como secretas o manuales.
 6. Despliega.
+7. Si el servicio fue creado manualmente y no por `Blueprint`, verifica que `DATABASE_URL_POOLER` sí tenga valor en el panel de Render; si queda vacía, el backend intentará la conexión directa.
 
 ## 4. Frontend en Vercel
 - En Vercel agrega:
@@ -42,3 +46,4 @@
 - Pega y ejecuta el contenido de `database/script.sql`.
 - Si Render no conecta bien usando el host directo `:5432`, completa `DATABASE_URL_POOLER`.
   - El backend ya prioriza `DATABASE_URL_POOLER` cuando existe, así que no necesitas reemplazar `DATABASE_URL`.
+  - La verificación final se hace en `GET /salud/base-datos`, donde `connectionType` debe salir como `pooler`.

@@ -5,12 +5,14 @@ import { ConfiguracionUbicacionEntidad } from './entidades/configuracion-ubicaci
 import { MensajeContactoEntidad } from './entidades/mensaje-contacto.entidad';
 import { ReservaEntidad } from './entidades/reserva.entidad';
 import { UsuarioEntidad } from './entidades/usuario.entidad';
-import { obtenerBanderaBooleana } from '../comun/utilidades/entorno.util';
+import {
+  esProduccion,
+  obtenerBanderaBooleana,
+  obtenerConfiguracionConexionBaseDatos,
+} from '../comun/utilidades/entorno.util';
 
 export function crearOpcionesTypeOrm(configService: ConfigService): TypeOrmModuleOptions {
-  const databaseUrlPooler = configService.get<string>('DATABASE_URL_POOLER')?.trim();
-  const databaseUrlDirecta = configService.get<string>('DATABASE_URL')?.trim();
-  const databaseUrl = databaseUrlPooler || databaseUrlDirecta;
+  const { url: databaseUrl } = obtenerConfiguracionConexionBaseDatos();
 
   if (!databaseUrl) {
     throw new Error(
@@ -34,5 +36,13 @@ export function crearOpcionesTypeOrm(configService: ConfigService): TypeOrmModul
     synchronize: false,
     autoLoadEntities: false,
     logging: false,
+    retryAttempts: esProduccion() ? 0 : 2,
+    retryDelay: 1000,
+    extra: {
+      max: 5,
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 10000,
+      keepAlive: true,
+    },
   };
 }

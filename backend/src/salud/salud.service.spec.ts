@@ -7,6 +7,7 @@ describe('SaludService', () => {
       obtenerModo: jest.fn().mockReturnValue('memoria'),
       estaConfigurada: jest.fn().mockReturnValue(false),
       estaInicializada: jest.fn().mockReturnValue(false),
+      obtenerTipoConexionConfigurada: jest.fn().mockReturnValue('ninguna'),
     } as unknown as BaseDatosService;
 
     const service = new SaludService(baseDatosService);
@@ -21,6 +22,7 @@ describe('SaludService', () => {
       obtenerModo: jest.fn().mockReturnValue('memoria'),
       estaConfigurada: jest.fn().mockReturnValue(false),
       estaInicializada: jest.fn().mockReturnValue(false),
+      obtenerTipoConexionConfigurada: jest.fn().mockReturnValue('ninguna'),
     } as unknown as BaseDatosService;
 
     const service = new SaludService(baseDatosService);
@@ -28,5 +30,6 @@ describe('SaludService', () => {
 
     expect(estado.status).toBe('memoria');
     expect(estado.connected).toBe(false);
+    expect(estado.connectionType).toBe('ninguna');
   });
 });

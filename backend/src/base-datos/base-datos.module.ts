@@ -1,7 +1,10 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { obtenerModoDatos } from '../comun/utilidades/entorno.util';
+import {
+  obtenerConfiguracionConexionBaseDatos,
+  obtenerModoDatos,
+} from '../comun/utilidades/entorno.util';
 import { BaseDatosService } from './base-datos.service';
 import { crearOpcionesTypeOrm } from './typeorm.config';
 
@@ -10,10 +13,9 @@ import { crearOpcionesTypeOrm } from './typeorm.config';
 export class BaseDatosModule {
   static registrar(): DynamicModule {
     const modo = obtenerModoDatos();
-    const databaseUrl = process.env.DATABASE_URL?.trim();
-    const databaseUrlPooler = process.env.DATABASE_URL_POOLER?.trim();
+    const conexionBaseDatos = obtenerConfiguracionConexionBaseDatos();
 
-    if (modo === 'typeorm' && !databaseUrl && !databaseUrlPooler) {
+    if (modo === 'typeorm' && !conexionBaseDatos.url) {
       throw new Error(
         'MODO_DATOS=typeorm requiere DATABASE_URL o DATABASE_URL_POOLER. Completa la conexión con Supabase antes de iniciar.',
       );
