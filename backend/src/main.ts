@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { setDefaultResultOrder } from 'node:dns';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,8 @@ import {
   obtenerResumenConfiguracionArranque,
   validarConfiguracionCriticaProduccion,
 } from './comun/utilidades/entorno.util';
+
+setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   validarConfiguracionCriticaProduccion();
