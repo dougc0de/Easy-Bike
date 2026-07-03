@@ -6,7 +6,7 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getRoot() {
+  obtenerRaiz() {
     return this.appService.getRootInfo();
   }
 }

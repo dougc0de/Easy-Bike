@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: easy-bike-backend
+    runtime: node
+    rootDir: backend
+    region: oregon
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /salud
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MODO_DATOS
+        value: typeorm
+      - key: DB_SSL
+        value: true
+      - key: FRONTEND_URL
+        value: https://easy-bike-ten.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_POOLER
+        sync: false
+      - key: SUPABASE_PROJECT_REF
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true

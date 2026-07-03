@@ -5,11 +5,11 @@ export class AppService {
   getRootInfo() {
     return {
       name: 'Easy Bike API',
-      status: 'bootstrap',
-      message: 'Backend base listo para integracion con frontend y modulos de negocio.',
+      status: 'ok',
+      message: 'Backend formal listo para modulos de negocio, DTOs y futura integracion con Supabase.',
       docs: {
-        health: '/health',
-        database: '/health/db',
+        salud: '/salud',
+        baseDatos: '/salud/base-datos',
       },
     };
   }
