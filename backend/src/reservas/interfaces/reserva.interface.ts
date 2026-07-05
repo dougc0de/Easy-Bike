@@ -6,7 +6,7 @@ export interface Reserva {
   id: string;
   nombreCliente: string;
   correoCliente: string;
-  telefonoCliente: string;
+  telefonoCliente: string | null;
   bicicletaId: string;
   nombreBicicleta: string;
   fechaReserva: string;

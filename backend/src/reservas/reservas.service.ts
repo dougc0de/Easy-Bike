@@ -75,7 +75,8 @@ export class ReservasService {
     const cambios: Partial<Reserva> = {
       nombreCliente: dto.fullName?.trim() ?? actual.nombreCliente,
       correoCliente: dto.email?.trim().toLowerCase() ?? actual.correoCliente,
-      telefonoCliente: dto.phone?.trim() ?? actual.telefonoCliente,
+      telefonoCliente:
+        dto.phone === undefined ? actual.telefonoCliente : dto.phone.trim() || null,
       bicicletaId: bicicleta.id,
       nombreBicicleta: bicicleta.nombre,
       fechaReserva,
@@ -195,7 +196,7 @@ export class ReservasService {
       id: randomUUID(),
       nombreCliente: dto.fullName.trim(),
       correoCliente: dto.email.trim().toLowerCase(),
-      telefonoCliente: dto.phone.trim(),
+      telefonoCliente: dto.phone?.trim() || null,
       bicicletaId: bicicleta.id,
       nombreBicicleta: bicicleta.nombre,
       fechaReserva: dto.date,

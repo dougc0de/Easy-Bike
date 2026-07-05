@@ -11,8 +11,8 @@ export class ReservaEntidad {
   @Column({ name: 'correo_cliente', type: 'varchar', length: 180 })
   correoCliente!: string;
 
-  @Column({ name: 'telefono_cliente', type: 'varchar', length: 40 })
-  telefonoCliente!: string;
+  @Column({ name: 'telefono_cliente', type: 'varchar', length: 40, nullable: true })
+  telefonoCliente!: string | null;
 
   @Column({ name: 'bicicleta_id', type: 'uuid' })
   bicicletaId!: string;

@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsString, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CrearReservaDto {
   @IsString()
@@ -9,9 +9,10 @@ export class CrearReservaDto {
   @MaxLength(180)
   email!: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(40)
-  phone!: string;
+  phone?: string;
 
   @IsString()
   @MaxLength(80)

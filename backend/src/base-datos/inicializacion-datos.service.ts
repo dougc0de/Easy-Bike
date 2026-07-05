@@ -26,6 +26,7 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
     const dataSource = this.baseDatosService.obtenerDataSource();
 
     await this.normalizarEsquemaUsuariosLegado();
+    await this.normalizarEsquemaReservasLegado();
     await this.sembrarUsuarios(dataSource.getRepository(UsuarioEntidad));
     await this.sembrarBicicletas(dataSource.getRepository(BicicletaEntidad));
     await this.sembrarReservas(dataSource.getRepository(ReservaEntidad));
@@ -53,6 +54,15 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
     await dataSource.query(`
       alter table if exists public.usuarios
       add column if not exists ultimo_acceso_at timestamptz;
+    `);
+  }
+
+  private async normalizarEsquemaReservasLegado() {
+    const dataSource = this.baseDatosService.obtenerDataSource();
+
+    await dataSource.query(`
+      alter table if exists public.reservas
+      alter column telefono_cliente drop not null;
     `);
   }
 
@@ -123,7 +133,7 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
           id: reserva.id,
           nombreCliente: reserva.nombreCliente,
           correoCliente: reserva.correoCliente,
-          telefonoCliente: reserva.telefonoCliente,
+          telefonoCliente: reserva.telefonoCliente ?? null,
           bicicletaId: reserva.bicicletaId,
           nombreBicicleta: reserva.nombreBicicleta,
           fechaReserva: reserva.fechaReserva,

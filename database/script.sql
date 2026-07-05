@@ -54,7 +54,7 @@ create table if not exists public.reservas (
   id uuid primary key default gen_random_uuid(),
   nombre_cliente varchar(140) not null,
   correo_cliente varchar(180) not null,
-  telefono_cliente varchar(40) not null,
+  telefono_cliente varchar(40),
   bicicleta_id uuid not null,
   nombre_bicicleta varchar(160) not null,
   fecha_reserva date not null,
@@ -120,6 +120,9 @@ alter table if exists public.usuarios
 
 alter table if exists public.usuarios
   add column if not exists ultimo_acceso_at timestamptz;
+
+alter table if exists public.reservas
+  alter column telefono_cliente drop not null;
 
 -- =========================================================
 -- 3. Índices sugeridos

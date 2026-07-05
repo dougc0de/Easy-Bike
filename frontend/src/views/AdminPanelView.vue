@@ -5,6 +5,12 @@ import {
   submitReservation,
   updateBikeAvailabilityStatus,
 } from '../services/siteApi'
+import {
+  formatNicaraguaPhone,
+  isCompleteNicaraguaPhone,
+  NICARAGUA_PHONE_MAX_LENGTH,
+  NICARAGUA_PHONE_PLACEHOLDER,
+} from '../utils/phone'
 import type {
   AuthSession,
   BikeItem,
@@ -228,6 +234,11 @@ function isPickupTimeAllowed(value: string) {
   return pickupMinutes >= minMinutes && pickupMinutes <= maxMinutes
 }
 
+function onStoreReservationPhoneInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  storeReservationForm.phone = formatNicaraguaPhone(target.value)
+}
+
 async function onSubmit() {
   if (
     !bikeForm.name.trim() ||
@@ -311,12 +322,17 @@ async function onStoreReservationSubmit() {
   if (
     !storeReservationForm.fullName.trim() ||
     !storeReservationForm.email.trim() ||
-    !storeReservationForm.phone.trim() ||
     !storeReservationForm.date ||
     !storeReservationForm.time
   ) {
     reservationFeedbackType.value = 'error'
-    reservationFeedback.value = 'Completa nombre, correo, teléfono, fecha y hora para generar la reserva.'
+    reservationFeedback.value = 'Completa nombre, correo, fecha y hora para generar la reserva.'
+    return
+  }
+
+  if (storeReservationForm.phone && !isCompleteNicaraguaPhone(storeReservationForm.phone)) {
+    reservationFeedbackType.value = 'error'
+    reservationFeedback.value = 'Ingresa un teléfono válido con formato 1234-5678.'
     return
   }
 
@@ -648,7 +664,11 @@ async function onStoreReservationSubmit() {
                   id="admin-store-phone"
                   v-model="storeReservationForm.phone"
                   type="tel"
-                  placeholder="+00 123 456 789"
+                  inputmode="numeric"
+                  autocomplete="tel"
+                  :maxlength="NICARAGUA_PHONE_MAX_LENGTH"
+                  :placeholder="NICARAGUA_PHONE_PLACEHOLDER"
+                  @input="onStoreReservationPhoneInput"
                 />
               </div>
 

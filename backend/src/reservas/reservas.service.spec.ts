@@ -91,4 +91,22 @@ describe('ReservasService', () => {
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('permite crear reservas sin teléfono', async () => {
+    const { service } = crearServicio();
+
+    const resultado = await service.crear({
+      fullName: 'Cliente Sin Teléfono',
+      email: 'cliente@easybike.com',
+      bikeId: bicicletaDisponible.id,
+      date: '2026-07-10',
+      time: '10:00',
+      duration: 24,
+      pickupPoint: 'Punto Central Easy Bike',
+      notes: '',
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.reservation.telefonoCliente).toBeNull();
+  });
 });

@@ -110,7 +110,8 @@ export class ReservasTypeormRepositorio implements RepositorioReservas {
 
     entidad.nombreCliente = cambios.nombreCliente ?? entidad.nombreCliente;
     entidad.correoCliente = cambios.correoCliente ?? entidad.correoCliente;
-    entidad.telefonoCliente = cambios.telefonoCliente ?? entidad.telefonoCliente;
+    entidad.telefonoCliente =
+      cambios.telefonoCliente === undefined ? entidad.telefonoCliente : cambios.telefonoCliente;
     entidad.bicicletaId = cambios.bicicletaId ?? entidad.bicicletaId;
     entidad.nombreBicicleta = cambios.nombreBicicleta ?? entidad.nombreBicicleta;
     entidad.fechaReserva = cambios.fechaReserva ?? entidad.fechaReserva;

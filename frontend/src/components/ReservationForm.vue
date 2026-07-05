@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import {
+  formatNicaraguaPhone,
+  isCompleteNicaraguaPhone,
+  NICARAGUA_PHONE_MAX_LENGTH,
+  NICARAGUA_PHONE_PLACEHOLDER,
+} from '../utils/phone'
 import { submitReservation } from '../services/siteApi'
 import type { BikeItem, PageId, ReservationPayload } from '../types'
 
@@ -84,6 +90,11 @@ function isPickupTimeAllowed(value: string) {
   return pickupMinutes >= minMinutes && pickupMinutes <= maxMinutes
 }
 
+function onPhoneInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  form.phone = formatNicaraguaPhone(target.value)
+}
+
 async function onSubmit() {
   if (!props.isLoggedIn) {
     feedbackType.value = 'error'
@@ -99,6 +110,12 @@ async function onSubmit() {
   if (!form.fullName || !form.email || !form.phone || !form.bikeId || !form.date || !form.time) {
     feedbackType.value = 'error'
     feedback.value = 'Completa los campos obligatorios para simular la reserva.'
+    return
+  }
+
+  if (form.phone && !isCompleteNicaraguaPhone(form.phone)) {
+    feedbackType.value = 'error'
+    feedback.value = 'Ingresa un teléfono válido con formato 1234-5678.'
     return
   }
 
@@ -180,7 +197,16 @@ async function onSubmit() {
       <div class="field-grid two-columns">
         <div class="field">
           <label for="reservation-phone">Teléfono</label>
-          <input id="reservation-phone" v-model="form.phone" type="tel" placeholder="+00 123 456 789" />
+          <input
+            id="reservation-phone"
+            v-model="form.phone"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel"
+            :maxlength="NICARAGUA_PHONE_MAX_LENGTH"
+            :placeholder="NICARAGUA_PHONE_PLACEHOLDER"
+            @input="onPhoneInput"
+          />
         </div>
 
         <div class="field">
