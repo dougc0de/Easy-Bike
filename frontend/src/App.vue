@@ -57,9 +57,9 @@ const routes: Record<PageId, string> = {
   'panel-admin': '#/panel-admin',
 }
 
-const currentPage = ref<PageId>('inicio')
 const authSession = ref<AuthSession | null>(loadAuthSession())
-const appReady = ref(false)
+const pendingProtectedPage = ref<PageId | null>(null)
+const currentPage = ref<PageId>(resolveInitialPage())
 const bikes = ref<BikeItem[]>([])
 const reservations = ref<ReservationSummary[]>([])
 const publicLocationConfig = ref<LocationConfig | null>(null)
@@ -93,9 +93,7 @@ const headerSessionActionLabel = computed(() => (authSession.value ? 'Cerrar ses
 
 const homePreviewBikes = computed(() => bikes.value.slice(0, 3))
 const resolvedLocationConfig = computed<LocationConfig>(() => publicLocationConfig.value ?? locationConfig)
-const showMapSection = computed(
-  () => appReady.value && (currentPage.value === 'inicio' || currentPage.value === 'contactanos'),
-)
+const showMapSection = computed(() => currentPage.value === 'inicio' || currentPage.value === 'contactanos')
 
 function resolvePage(hash: string): PageId {
   const cleanHash = hash.replace(/^#\//, '').trim()
@@ -125,29 +123,48 @@ function isAuthRole(value: unknown): value is AuthRole {
   return value === 'cliente' || value === 'administracion'
 }
 
+function isProtectedPage(page: PageId) {
+  return page === 'perfil-cliente' || page === 'panel-admin'
+}
+
 function resolveAccessiblePage(page: PageId): PageId {
   if (page === 'perfil-cliente') {
     if (!authSession.value) {
+      pendingProtectedPage.value = page
       loginEntryMessage.value = 'Para entrar a tu perfil primero debes iniciar sesión.'
       return 'login'
     }
 
+    pendingProtectedPage.value = null
     return authSession.value.role === 'cliente' ? 'perfil-cliente' : 'panel-admin'
   }
 
   if (page === 'panel-admin') {
     if (!authSession.value) {
+      pendingProtectedPage.value = page
       loginEntryMessage.value = 'Para entrar al panel administrativo primero debes iniciar sesión.'
       return 'login'
     }
 
+    pendingProtectedPage.value = null
     return authSession.value.role === 'administracion' ? 'panel-admin' : 'perfil-cliente'
   }
 
+  pendingProtectedPage.value = null
   return page
 }
 
-function syncPageWithHash() {
+function resolveInitialPage(): PageId {
+  if (typeof window === 'undefined') {
+    return 'inicio'
+  }
+
+  const initialHash = window.location.hash || routes.inicio
+
+  return resolveAccessiblePage(resolvePage(initialHash))
+}
+
+function syncPageWithHash(scrollBehavior: ScrollBehavior = 'smooth') {
   const requestedPage = resolvePage(window.location.hash)
   const nextPage = resolveAccessiblePage(requestedPage)
 
@@ -161,7 +178,7 @@ function syncPageWithHash() {
     loginEntryMessage.value = ''
   }
 
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: scrollBehavior })
 }
 
 function ensureInitialRoute() {
@@ -169,6 +186,10 @@ function ensureInitialRoute() {
     window.history.replaceState(null, '', `${window.location.pathname}#/inicio`)
   }
 
+  syncPageWithHash('auto')
+}
+
+function handleHashChange() {
   syncPageWithHash()
 }
 
@@ -235,12 +256,28 @@ async function bootstrapAuthSession() {
     authSession.value = result.session
     persistAuthSession(result.session)
     await hydrateReservationsFromApi(result.session)
+
+    if (pendingProtectedPage.value) {
+      const nextPage =
+        result.session.role === 'administracion' ? 'panel-admin' : 'perfil-cliente'
+      pendingProtectedPage.value = null
+      navigateTo(nextPage)
+      return
+    }
+
+    if (isProtectedPage(currentPage.value)) {
+      syncPageWithHash('auto')
+    }
   } catch {
     authSession.value = null
     clearAuthSession()
     reservations.value = []
     reservationsStatus.value = 'idle'
     reservationsMessage.value = ''
+
+    if (isProtectedPage(currentPage.value) || pendingProtectedPage.value) {
+      syncPageWithHash('auto')
+    }
   }
 }
 
@@ -449,19 +486,20 @@ watch(
 )
 
 onMounted(async () => {
-  await Promise.all([
-    hydrateBikesFromApi(),
-    hydratePublicLocationConfigFromApi(),
-    bootstrapAuthSession(),
-  ])
   ensureInitialRoute()
-  window.addEventListener('hashchange', syncPageWithHash)
+  window.addEventListener('hashchange', handleHashChange)
   scheduleScrollRevealRegistration()
-  appReady.value = true
+
+  void hydrateBikesFromApi()
+  void hydratePublicLocationConfigFromApi()
+
+  if (authSession.value || hasStoredAccessToken() || isProtectedPage(currentPage.value)) {
+    void bootstrapAuthSession()
+  }
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('hashchange', syncPageWithHash)
+  window.removeEventListener('hashchange', handleHashChange)
   disconnectScrollReveal()
 
   if (revealFrameId !== null) {
@@ -480,7 +518,7 @@ onBeforeUnmount(() => {
       @session-action="handleLogout"
     />
 
-    <main v-if="appReady" class="page-content">
+    <main class="page-content">
       <HomeView
         v-if="currentPage === 'inicio'"
         :benefits="homeBenefits"
@@ -564,15 +602,6 @@ onBeforeUnmount(() => {
       />
     </main>
 
-    <main v-else class="page-content">
-      <section class="page-loading">
-        <div class="container">
-          <span class="eyebrow">Easy Bike</span>
-          <h1 class="section-title">Preparando tu sesión.</h1>
-        </div>
-      </section>
-    </main>
-
     <MapSection
       v-if="showMapSection"
       :location="resolvedLocationConfig"
@@ -587,10 +616,3 @@ onBeforeUnmount(() => {
     />
   </div>
 </template>
-
-<style scoped>
-.page-loading {
-  padding: 8.5rem 0 4rem;
-  background: #fff;
-}
-</style>

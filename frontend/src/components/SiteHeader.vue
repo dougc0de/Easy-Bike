@@ -91,21 +91,34 @@ function triggerSessionAction() {
 }
 
 .brand-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 0.35rem 0.65rem;
+  padding: 0.28rem 0.62rem 0.28rem 0.42rem;
   border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 18px;
+  background: #fff;
   color: #0f3f6d;
   box-shadow: 0 14px 34px rgba(15, 63, 109, 0.15);
+}
+
+.brand-chip::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -0.95rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  background: #2da8c1;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  pointer-events: none;
 }
 
 .brand-chip__logo {
   display: block;
   width: auto;
-  height: 3rem;
+  height: 3.1rem;
   object-fit: contain;
 }
 
@@ -160,6 +173,21 @@ function triggerSessionAction() {
 }
 
 @media (max-width: 979px) {
+  .brand-chip {
+    padding: 0.24rem 0.5rem 0.24rem 0.36rem;
+    border-radius: 16px;
+  }
+
+  .brand-chip::after {
+    right: -0.82rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .brand-chip__logo {
+    height: 2.8rem;
+  }
+
   .site-nav__item {
     padding: 0.72rem 0.85rem;
     border-radius: 12px;
