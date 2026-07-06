@@ -19,9 +19,15 @@ function getDialHref(phone: string) {
       <div class="map-section__corner map-section__corner--right" aria-hidden="true" />
 
       <div class="container">
-        <div class="map-section__title-bar">
-          <span class="map-section__title-icon">⌖</span>
-          <strong>{{ location?.title ?? 'Ubicación Easy Bike' }}</strong>
+        <div class="map-section__title-wrap">
+          <div class="map-section__title-bar">
+            <span class="map-section__title-icon">⌖</span>
+            <strong>{{ location?.title ?? 'Ubicación Easy Bike' }}</strong>
+          </div>
+
+          <p v-if="location?.subtitle" class="map-section__subtitle">
+            {{ location.subtitle }}
+          </p>
         </div>
       </div>
     </div>
@@ -49,15 +55,18 @@ function getDialHref(phone: string) {
 
         <a class="map-section__cta" :href="location.externalUrl" :title="location.ctaLabel" target="_blank" rel="noreferrer">
           <span class="map-section__cta-icon">⌖</span>
-          <span>Clic aca</span>
+          <span>{{ location.ctaLabel }}</span>
         </a>
 
         <div class="map-section__info">
           <strong>{{ location.address }}</strong>
           <span>{{ location.schedule }}</span>
-          <a :href="getDialHref(location.contactPhone)">{{ location.contactPhone }}</a>
-          <a :href="`mailto:${location.contactEmail}`">{{ location.contactEmail }}</a>
         </div>
+      </div>
+
+      <div v-if="location" class="map-section__contact-strip">
+        <a :href="getDialHref(location.contactPhone)">{{ location.contactPhone }}</a>
+        <a :href="`mailto:${location.contactEmail}`">{{ location.contactEmail }}</a>
       </div>
 
       <article v-else class="map-section__unavailable">
@@ -121,6 +130,11 @@ function getDialHref(phone: string) {
   font-weight: 800;
 }
 
+.map-section__title-wrap {
+  display: grid;
+  justify-items: center;
+}
+
 .map-section__title-bar::after {
   content: '';
   position: absolute;
@@ -134,6 +148,13 @@ function getDialHref(phone: string) {
 
 .map-section__title-icon {
   font-size: 1.8rem;
+}
+
+.map-section__subtitle {
+  margin: 0 0 1rem;
+  max-width: 48rem;
+  text-align: center;
+  color: var(--ink-soft);
 }
 
 .map-section__map {
@@ -241,7 +262,15 @@ function getDialHref(phone: string) {
   margin: 0;
 }
 
-.map-section__info a {
+.map-section__contact-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  justify-content: center;
+  padding: 0.95rem 0 0.1rem;
+}
+
+.map-section__contact-strip a {
   color: var(--brand-cyan-deep);
   font-weight: 700;
   text-decoration: none;
