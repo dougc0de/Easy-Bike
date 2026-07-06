@@ -171,6 +171,214 @@ create index if not exists idx_contactos_estado on public.mensajes_contacto(esta
 -- La aplicación no debe sembrar usuarios, bicicletas, reservas ni ubicaciones al iniciar.
 -- Si la base está vacía, aprovisiona manualmente aquí o desde herramientas administrativas.
 -- Este script no incluye DROP, TRUNCATE ni DELETE sobre usuarios o reservas existentes.
+--
+-- Catálogo oficial Easy Bike:
+-- Estas sentencias restauran o actualizan el catálogo real del negocio sin tocar usuarios,
+-- reservas ni cambiar IDs de bicicletas ya existentes con el mismo nombre.
+
+update public.bicicletas
+set
+  categoria = 'Urbana',
+  descripcion_corta = 'Ligera, estable y perfecta para moverte entre clases, trabajo y recados.',
+  detalle = 'Perfecta para desplazamientos en la ciudad, cómoda, práctica y fácil de manejar. Ideal si quieres un recorrido ágil con postura relajada.',
+  precio = 'Desde $22 / 24 h',
+  autonomia = 'Hasta 45 km',
+  disponibilidad = 'Disponible',
+  color_acento = '#f28705',
+  recomendado_para = 'Recorridos diarios y traslados rápidos.',
+  url_imagen = '/images/carruselBici1.jpg',
+  texto_alternativo_imagen = 'Bicicleta eléctrica urbana Easy Bike',
+  activo = true,
+  updated_at = timezone('utc', now())
+where lower(nombre) = lower('Bicicleta eléctrica urbana');
+
+insert into public.bicicletas (
+  id,
+  nombre,
+  categoria,
+  descripcion_corta,
+  detalle,
+  precio,
+  autonomia,
+  disponibilidad,
+  color_acento,
+  recomendado_para,
+  url_imagen,
+  texto_alternativo_imagen,
+  activo
+)
+select
+  '6d2feecb-1558-4a18-832a-0d5517e83001',
+  'Bicicleta eléctrica urbana',
+  'Urbana',
+  'Ligera, estable y perfecta para moverte entre clases, trabajo y recados.',
+  'Perfecta para desplazamientos en la ciudad, cómoda, práctica y fácil de manejar. Ideal si quieres un recorrido ágil con postura relajada.',
+  'Desde $22 / 24 h',
+  'Hasta 45 km',
+  'Disponible',
+  '#f28705',
+  'Recorridos diarios y traslados rápidos.',
+  '/images/carruselBici1.jpg',
+  'Bicicleta eléctrica urbana Easy Bike',
+  true
+where not exists (
+  select 1
+  from public.bicicletas
+  where lower(nombre) = lower('Bicicleta eléctrica urbana')
+);
+
+update public.bicicletas
+set
+  categoria = 'Plegable',
+  descripcion_corta = 'Compacta para departamentos, oficinas y usuarios que combinan trayectos.',
+  detalle = 'Su diseño plegable la hace ideal para usuarios que necesitan ahorrar espacio y combinar movilidad con transporte público.',
+  precio = 'Desde $25 / 24 h',
+  autonomia = 'Hasta 35 km',
+  disponibilidad = 'Últimas unidades',
+  color_acento = '#1b7f8f',
+  recomendado_para = 'Espacios reducidos y trayectos mixtos.',
+  url_imagen = '/images/carruselBici2-BicicletaElectricaPlegable.jpg',
+  texto_alternativo_imagen = 'Bicicleta plegable City Flow Easy Bike',
+  activo = true,
+  updated_at = timezone('utc', now())
+where lower(nombre) = lower('City Flow plegable');
+
+insert into public.bicicletas (
+  id,
+  nombre,
+  categoria,
+  descripcion_corta,
+  detalle,
+  precio,
+  autonomia,
+  disponibilidad,
+  color_acento,
+  recomendado_para,
+  url_imagen,
+  texto_alternativo_imagen,
+  activo
+)
+select
+  '7d2feecb-1558-4a18-832a-0d5517e83002',
+  'City Flow plegable',
+  'Plegable',
+  'Compacta para departamentos, oficinas y usuarios que combinan trayectos.',
+  'Su diseño plegable la hace ideal para usuarios que necesitan ahorrar espacio y combinar movilidad con transporte público.',
+  'Desde $25 / 24 h',
+  'Hasta 35 km',
+  'Últimas unidades',
+  '#1b7f8f',
+  'Espacios reducidos y trayectos mixtos.',
+  '/images/carruselBici2-BicicletaElectricaPlegable.jpg',
+  'Bicicleta plegable City Flow Easy Bike',
+  true
+where not exists (
+  select 1
+  from public.bicicletas
+  where lower(nombre) = lower('City Flow plegable')
+);
+
+update public.bicicletas
+set
+  categoria = 'Todoterreno',
+  descripcion_corta = 'Construida para superficies irregulares y rutas más largas de fin de semana.',
+  detalle = 'Ofrece mayor soporte, llantas robustas y un perfil más aventurero para quienes quieren una bici eléctrica versátil.',
+  precio = 'Desde $31 / 24 h',
+  autonomia = 'Hasta 55 km',
+  disponibilidad = 'Disponible',
+  color_acento = '#18362f',
+  recomendado_para = 'Aventura ligera y rutas urbanas exigentes.',
+  url_imagen = '/images/carruselBici2.jpg',
+  texto_alternativo_imagen = 'Bicicleta todoterreno Terra X Easy Bike',
+  activo = true,
+  updated_at = timezone('utc', now())
+where lower(nombre) = lower('Terra X adventure');
+
+insert into public.bicicletas (
+  id,
+  nombre,
+  categoria,
+  descripcion_corta,
+  detalle,
+  precio,
+  autonomia,
+  disponibilidad,
+  color_acento,
+  recomendado_para,
+  url_imagen,
+  texto_alternativo_imagen,
+  activo
+)
+select
+  '8d2feecb-1558-4a18-832a-0d5517e83003',
+  'Terra X adventure',
+  'Todoterreno',
+  'Construida para superficies irregulares y rutas más largas de fin de semana.',
+  'Ofrece mayor soporte, llantas robustas y un perfil más aventurero para quienes quieren una bici eléctrica versátil.',
+  'Desde $31 / 24 h',
+  'Hasta 55 km',
+  'Disponible',
+  '#18362f',
+  'Aventura ligera y rutas urbanas exigentes.',
+  '/images/carruselBici2.jpg',
+  'Bicicleta todoterreno Terra X Easy Bike',
+  true
+where not exists (
+  select 1
+  from public.bicicletas
+  where lower(nombre) = lower('Terra X adventure')
+);
+
+update public.bicicletas
+set
+  categoria = 'Confort',
+  descripcion_corta = 'Una opción cómoda, estable y con postura alta para trayectos relajados.',
+  detalle = 'Pensada para quienes priorizan confort, seguridad y una experiencia muy amigable al conducir por la ciudad.',
+  precio = 'Desde $27 / 24 h',
+  autonomia = 'Hasta 40 km',
+  disponibilidad = 'Próximamente',
+  color_acento = '#53b9cc',
+  recomendado_para = 'Usuarios primerizos y trayectos tranquilos.',
+  url_imagen = '/images/carruselBici1.jpg',
+  texto_alternativo_imagen = 'Bicicleta confort Swift Comfort Easy Bike',
+  activo = true,
+  updated_at = timezone('utc', now())
+where lower(nombre) = lower('Swift Comfort');
+
+insert into public.bicicletas (
+  id,
+  nombre,
+  categoria,
+  descripcion_corta,
+  detalle,
+  precio,
+  autonomia,
+  disponibilidad,
+  color_acento,
+  recomendado_para,
+  url_imagen,
+  texto_alternativo_imagen,
+  activo
+)
+select
+  '9d2feecb-1558-4a18-832a-0d5517e83004',
+  'Swift Comfort',
+  'Confort',
+  'Una opción cómoda, estable y con postura alta para trayectos relajados.',
+  'Pensada para quienes priorizan confort, seguridad y una experiencia muy amigable al conducir por la ciudad.',
+  'Desde $27 / 24 h',
+  'Hasta 40 km',
+  'Próximamente',
+  '#53b9cc',
+  'Usuarios primerizos y trayectos tranquilos.',
+  '/images/carruselBici1.jpg',
+  'Bicicleta confort Swift Comfort Easy Bike',
+  true
+where not exists (
+  select 1
+  from public.bicicletas
+  where lower(nombre) = lower('Swift Comfort')
+);
 
 -- =========================================================
 -- 5. Triggers sugeridos para updated_at
