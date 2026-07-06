@@ -23,6 +23,8 @@ export class UbicacionesTypeormRepositorio implements RepositorioUbicaciones {
       subtitulo: entidad.subtitulo,
       direccion: entidad.direccion,
       horario: entidad.horario,
+      telefonoContacto: entidad.telefonoContacto,
+      emailContacto: entidad.emailContacto,
       etiquetaCta: entidad.etiquetaCta,
       urlExterna: entidad.urlExterna,
       urlImagen: entidad.urlImagen,
@@ -79,6 +81,8 @@ export class UbicacionesTypeormRepositorio implements RepositorioUbicaciones {
       subtitulo: dto.subtitulo.trim(),
       direccion: dto.direccion.trim(),
       horario: dto.horario.trim(),
+      telefonoContacto: dto.telefonoContacto.trim(),
+      emailContacto: dto.emailContacto.trim().toLowerCase(),
       etiquetaCta: dto.etiquetaCta.trim(),
       urlExterna: dto.urlExterna.trim(),
       urlImagen: dto.urlImagen?.trim() || null,
@@ -103,6 +107,8 @@ export class UbicacionesTypeormRepositorio implements RepositorioUbicaciones {
     entidad.subtitulo = dto.subtitulo?.trim() ?? entidad.subtitulo;
     entidad.direccion = dto.direccion?.trim() ?? entidad.direccion;
     entidad.horario = dto.horario?.trim() ?? entidad.horario;
+    entidad.telefonoContacto = dto.telefonoContacto?.trim() ?? entidad.telefonoContacto;
+    entidad.emailContacto = dto.emailContacto?.trim().toLowerCase() ?? entidad.emailContacto;
     entidad.etiquetaCta = dto.etiquetaCta?.trim() ?? entidad.etiquetaCta;
     entidad.urlExterna = dto.urlExterna?.trim() ?? entidad.urlExterna;
     entidad.urlImagen = dto.urlImagen === undefined ? entidad.urlImagen : dto.urlImagen?.trim() || null;

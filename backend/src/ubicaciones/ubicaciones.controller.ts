@@ -15,6 +15,8 @@ function mapearRespuestaMapa(configuracion: ConfiguracionUbicacion) {
     subtitle: configuracion.subtitulo,
     address: configuracion.direccion,
     schedule: configuracion.horario,
+    contactPhone: configuracion.telefonoContacto,
+    contactEmail: configuracion.emailContacto,
     ctaLabel: configuracion.etiquetaCta,
     externalUrl: configuracion.urlExterna,
     imageUrl: configuracion.urlImagen ?? '',

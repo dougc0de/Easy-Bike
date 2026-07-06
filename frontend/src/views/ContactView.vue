@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { submitContactMessage } from '../services/siteApi'
-import type { ContactCard, ContactPayload } from '../types'
+import type { ContactPayload, LocationConfig } from '../types'
 
-defineProps<{
-  contactCards: ContactCard[]
+const props = defineProps<{
+  location: LocationConfig | null
+  locationStatus: 'loading' | 'ready' | 'error'
+  locationMessage: string
 }>()
 
 const form = reactive<ContactPayload>({
@@ -17,6 +19,32 @@ const form = reactive<ContactPayload>({
 const isSending = ref(false)
 const feedback = ref('')
 const feedbackType = ref<'success' | 'error'>('success')
+const contactCards = computed(() =>
+  props.location
+    ? [
+        {
+          title: 'Correo',
+          value: props.location.contactEmail,
+          note: 'Ideal para consultas generales, soporte y confirmaciones.',
+        },
+        {
+          title: 'Teléfono',
+          value: props.location.contactPhone,
+          note: 'Atención directa para reservas y dudas urgentes.',
+        },
+        {
+          title: 'Horario',
+          value: props.location.schedule,
+          note: 'Te respondemos dentro del horario operativo registrado para la tienda.',
+        },
+      ]
+    : [],
+)
+const locationNotice = computed(() =>
+  props.locationStatus === 'loading'
+    ? 'Cargando configuración de contacto...'
+    : props.locationMessage || 'La configuración pública de contacto no está disponible.',
+)
 
 async function onSubmit() {
   if (!form.name || !form.email || !form.subject || !form.message) {
@@ -57,11 +85,18 @@ async function onSubmit() {
           </p>
         </div>
 
-        <div class="contact-cards">
+        <div v-if="contactCards.length" class="contact-cards">
           <article v-for="card in contactCards" :key="card.title" class="contact-card">
             <h3>{{ card.title }}</h3>
             <strong>{{ card.value }}</strong>
             <p>{{ card.note }}</p>
+          </article>
+        </div>
+
+        <div v-else class="contact-cards">
+          <article class="contact-card contact-card--empty">
+            <h3>Configuración no disponible</h3>
+            <p>{{ locationNotice }}</p>
           </article>
         </div>
       </div>
@@ -78,8 +113,8 @@ async function onSubmit() {
             <li>Soporte inicial para reservas web.</li>
           </ul>
           <p>
-            Cuando backend esté conectado, esta vista puede enviar tickets, mensajes o solicitudes
-            directas sin cambiar la experiencia visual.
+            También puedes dejar tu mensaje desde este formulario para que el equipo lo revise y dé
+            seguimiento desde el panel administrativo.
           </p>
         </article>
 
@@ -190,6 +225,10 @@ async function onSubmit() {
 .contact-card strong,
 .contact-card p {
   margin: 0;
+}
+
+.contact-card--empty {
+  border-top-color: rgba(19, 33, 41, 0.18);
 }
 
 .contact-card strong {

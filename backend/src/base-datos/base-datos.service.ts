@@ -29,7 +29,7 @@ export class BaseDatosService {
   obtenerDataSource(): DataSource {
     if (!this.dataSource) {
       throw new ServiceUnavailableException(
-        'El DataSource de TypeORM no está disponible. Verifica MODO_DATOS y la conexión DATABASE_URL o DATABASE_URL_POOLER.',
+        'El DataSource de TypeORM no está disponible. Verifica la conexión DATABASE_URL o DATABASE_URL_POOLER.',
       );
     }
 

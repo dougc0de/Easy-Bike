@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import { EstadoReserva } from '../../comun/enums/estado-reserva.enum';
 
 export class ActualizarReservaDto {
@@ -18,8 +18,7 @@ export class ActualizarReservaDto {
   phone?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
+  @IsUUID()
   bikeId?: string;
 
   @IsOptional()

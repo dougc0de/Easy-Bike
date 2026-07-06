@@ -21,7 +21,7 @@ Dentro del panel de Supabase:
 5. Copia la cadena completa y úsala como `DATABASE_URL`.
 6. Si vas a desplegar en Render u otro entorno con restricciones de red, copia también la pooler y úsala como `DATABASE_URL_POOLER`.
 
-El backend NestJS usará esa cadena con TypeORM cuando cambies:
+El backend NestJS usará esa cadena con TypeORM con una conexión real a PostgreSQL/Supabase:
 
 ```env
 MODO_DATOS=typeorm
@@ -31,8 +31,8 @@ DB_SSL=true
 ```
 
 ## Cómo se conecta NestJS con TypeORM
-- La app arranca por defecto en `MODO_DATOS=memoria`.
-- Cuando actives `MODO_DATOS=typeorm`, `backend/src/base-datos/base-datos.module.ts` exige `DATABASE_URL` o `DATABASE_URL_POOLER`.
+- La app usa `TypeORM` como única ruta operativa.
+- `backend/src/base-datos/base-datos.module.ts` exige `DATABASE_URL` o `DATABASE_URL_POOLER` para iniciar.
 - La configuración final de TypeORM vive en `backend/src/base-datos/typeorm.config.ts`.
 - Si existe `DATABASE_URL_POOLER`, el backend la prioriza sobre la conexión directa.
 - El estado se puede revisar en `GET /salud/base-datos`.
@@ -42,9 +42,6 @@ Esta fase todavía no implementa:
 
 - relaciones finales endurecidas
 - políticas RLS
-- JWT
-- login y registro reales
-- protección de rutas
 - integración final de auth con Supabase
 
 ## Archivos de este directorio

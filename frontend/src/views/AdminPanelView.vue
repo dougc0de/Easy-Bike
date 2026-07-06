@@ -11,6 +11,7 @@ import {
   NICARAGUA_PHONE_MAX_LENGTH,
   NICARAGUA_PHONE_PLACEHOLDER,
 } from '../utils/phone'
+import { isUuid } from '../utils/uuid'
 import type {
   AuthSession,
   BikeItem,
@@ -23,6 +24,10 @@ const props = defineProps<{
   session: AuthSession
   bikes: BikeItem[]
   reservations: ReservationSummary[]
+  catalogStatus: 'loading' | 'ready' | 'error'
+  catalogMessage: string
+  reservationsStatus: 'idle' | 'loading' | 'ready' | 'error'
+  reservationsMessage: string
 }>()
 
 const emit = defineEmits<{
@@ -73,7 +78,11 @@ const warningCount = computed(() =>
 )
 
 const reservableBikes = computed(() =>
-  props.bikes.filter((bike) => bike.availability === 'Disponible' || bike.availability === 'Últimas unidades'),
+  props.bikes.filter(
+    (bike) =>
+      isUuid(bike.id) &&
+      (bike.availability === 'Disponible' || bike.availability === 'Últimas unidades'),
+  ),
 )
 
 const availabilityByCategory = computed(() => {
@@ -395,8 +404,8 @@ async function onStoreReservationSubmit() {
           </p>
 
           <div class="admin-hero__notice">
-            <strong>Flujo listo para pruebas del equipo</strong>
-            <p>El panel ya quedó conectado a la API para que el resto del equipo continúe sobre una base real.</p>
+            <strong>Operación conectada a la API</strong>
+            <p>Desde aquí el equipo administra catálogo, disponibilidad y reservas usando datos reales del sistema.</p>
           </div>
         </div>
 
@@ -503,6 +512,10 @@ async function onStoreReservationSubmit() {
               si quedan pocas unidades.
             </p>
           </div>
+
+          <p v-if="catalogMessage" class="admin-section__notice" :class="{ 'is-error': catalogStatus === 'error' }">
+            {{ catalogMessage }}
+          </p>
 
           <div class="admin-inventory__stats">
             <span>{{ availableCount }} disponibles</span>
@@ -778,6 +791,14 @@ async function onStoreReservationSubmit() {
           <h2 class="section-title">Resumen económico y movimiento reciente.</h2>
         </div>
 
+        <p
+          v-if="reservationsMessage"
+          class="admin-section__notice"
+          :class="{ 'is-error': reservationsStatus === 'error' }"
+        >
+          {{ reservationsMessage }}
+        </p>
+
         <div class="admin-accounting__summary">
           <article class="admin-accounting__card">
             <strong>{{ formatCurrency(totalRevenue) }}</strong>
@@ -965,6 +986,18 @@ async function onStoreReservationSubmit() {
 .admin-inventory {
   display: grid;
   gap: 1rem;
+}
+
+.admin-section__notice {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid rgba(45, 168, 193, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink-soft);
+}
+
+.admin-section__notice.is-error {
+  border-left-color: rgba(188, 69, 69, 0.9);
 }
 
 .admin-inventory__header {

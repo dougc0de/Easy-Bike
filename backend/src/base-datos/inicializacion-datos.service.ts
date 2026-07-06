@@ -1,16 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { BicicletaEntidad } from './entidades/bicicleta.entidad';
-import { ConfiguracionUbicacionEntidad } from './entidades/configuracion-ubicacion.entidad';
-import { ReservaEntidad } from './entidades/reserva.entidad';
-import { UsuarioEntidad } from './entidades/usuario.entidad';
 import { BaseDatosService } from './base-datos.service';
-import { Repository } from 'typeorm';
-import {
-  BICICLETAS_SEMILLA,
-  RESERVAS_SEMILLA,
-  UBICACIONES_SEMILLA,
-  USUARIOS_SEMILLA,
-} from '../comun/datos/semillas';
 
 @Injectable()
 export class InicializacionDatosService implements OnApplicationBootstrap {
@@ -19,18 +8,15 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
   constructor(private readonly baseDatosService: BaseDatosService) {}
 
   async onApplicationBootstrap() {
-    if (this.baseDatosService.obtenerModo() !== 'typeorm' || !this.baseDatosService.estaInicializada()) {
+    if (!this.baseDatosService.estaInicializada()) {
       return;
     }
 
-    const dataSource = this.baseDatosService.obtenerDataSource();
-
     await this.normalizarEsquemaUsuariosLegado();
     await this.normalizarEsquemaReservasLegado();
-    await this.sembrarUsuarios(dataSource.getRepository(UsuarioEntidad));
-    await this.sembrarBicicletas(dataSource.getRepository(BicicletaEntidad));
-    await this.sembrarReservas(dataSource.getRepository(ReservaEntidad));
-    await this.sembrarUbicaciones(dataSource.getRepository(ConfiguracionUbicacionEntidad));
+    await this.normalizarEsquemaUbicacionesLegado();
+
+    this.logger.log('Compatibilidad de esquema verificada sin sembrar datos operativos.');
   }
 
   private async normalizarEsquemaUsuariosLegado() {
@@ -66,119 +52,29 @@ export class InicializacionDatosService implements OnApplicationBootstrap {
     `);
   }
 
-  private async sembrarUsuarios(repositorio: Repository<UsuarioEntidad>) {
-    const total = await repositorio.count();
+  private async normalizarEsquemaUbicacionesLegado() {
+    const dataSource = this.baseDatosService.obtenerDataSource();
 
-    if (total > 0) return;
+    await dataSource.query(`
+      alter table if exists public.configuraciones_ubicacion
+      add column if not exists contact_phone varchar(40) not null default '';
+    `);
 
-    await repositorio.save(
-      repositorio.create(
-        USUARIOS_SEMILLA.map((usuario) => ({
-          id: usuario.id,
-          email: usuario.email,
-          nombreCompleto: usuario.nombreCompleto,
-          rol: usuario.rol,
-          telefono: usuario.telefono ?? null,
-          passwordHash: usuario.passwordHash ?? null,
-          refreshTokenHash: usuario.refreshTokenHash ?? null,
-          activo: usuario.activo,
-          ultimoAccesoAt: usuario.ultimoAccesoAt ? new Date(usuario.ultimoAccesoAt) : null,
-          createdAt: new Date(usuario.createdAt),
-          updatedAt: new Date(usuario.updatedAt),
-        })),
-      ),
-    );
+    await dataSource.query(`
+      alter table if exists public.configuraciones_ubicacion
+      add column if not exists contact_email varchar(180) not null default '';
+    `);
 
-    this.logger.log(`Se sembraron ${USUARIOS_SEMILLA.length} usuarios iniciales en TypeORM.`);
-  }
+    await dataSource.query(`
+      update public.configuraciones_ubicacion
+      set contact_phone = ''
+      where contact_phone is null;
+    `);
 
-  private async sembrarBicicletas(repositorio: Repository<BicicletaEntidad>) {
-    const total = await repositorio.count();
-
-    if (total > 0) return;
-
-    await repositorio.save(
-      repositorio.create(
-        BICICLETAS_SEMILLA.map((bicicleta) => ({
-          id: bicicleta.id,
-          nombre: bicicleta.nombre,
-          categoria: bicicleta.categoria,
-          descripcionCorta: bicicleta.descripcionCorta,
-          detalle: bicicleta.detalle,
-          precio: bicicleta.precio,
-          autonomia: bicicleta.autonomia,
-          disponibilidad: bicicleta.disponibilidad,
-          colorAcento: bicicleta.colorAcento,
-          recomendadoPara: bicicleta.recomendadoPara,
-          urlImagen: bicicleta.urlImagen,
-          textoAlternativoImagen: bicicleta.textoAlternativoImagen,
-          activo: bicicleta.activo,
-          createdAt: new Date(bicicleta.createdAt),
-          updatedAt: new Date(bicicleta.updatedAt),
-        })),
-      ),
-    );
-
-    this.logger.log(`Se sembraron ${BICICLETAS_SEMILLA.length} bicicletas iniciales en TypeORM.`);
-  }
-
-  private async sembrarReservas(repositorio: Repository<ReservaEntidad>) {
-    const total = await repositorio.count();
-
-    if (total > 0) return;
-
-    await repositorio.save(
-      repositorio.create(
-        RESERVAS_SEMILLA.map((reserva) => ({
-          id: reserva.id,
-          nombreCliente: reserva.nombreCliente,
-          correoCliente: reserva.correoCliente,
-          telefonoCliente: reserva.telefonoCliente ?? null,
-          bicicletaId: reserva.bicicletaId,
-          nombreBicicleta: reserva.nombreBicicleta,
-          fechaReserva: reserva.fechaReserva,
-          horaReserva: reserva.horaReserva,
-          duracionHoras: reserva.duracionHoras,
-          puntoRecojo: reserva.puntoRecojo,
-          notas: reserva.notas,
-          monto: reserva.monto,
-          estado: reserva.estado,
-          codigoVoucher: reserva.codigoVoucher,
-          metodoPago: reserva.metodoPago,
-          origen: reserva.origen,
-          atendidaPorUsuarioId: reserva.atendidaPorUsuarioId,
-          createdAt: new Date(reserva.createdAt),
-          updatedAt: new Date(reserva.updatedAt),
-        })),
-      ),
-    );
-
-    this.logger.log(`Se sembraron ${RESERVAS_SEMILLA.length} reservas iniciales en TypeORM.`);
-  }
-
-  private async sembrarUbicaciones(repositorio: Repository<ConfiguracionUbicacionEntidad>) {
-    const total = await repositorio.count();
-
-    if (total > 0) return;
-
-    await repositorio.save(
-      repositorio.create(
-        UBICACIONES_SEMILLA.map((ubicacion) => ({
-          id: ubicacion.id,
-          titulo: ubicacion.titulo,
-          subtitulo: ubicacion.subtitulo,
-          direccion: ubicacion.direccion,
-          horario: ubicacion.horario,
-          etiquetaCta: ubicacion.etiquetaCta,
-          urlExterna: ubicacion.urlExterna,
-          urlImagen: ubicacion.urlImagen ?? null,
-          urlEmbed: ubicacion.urlEmbed ?? null,
-          createdAt: new Date(ubicacion.createdAt),
-          updatedAt: new Date(ubicacion.updatedAt),
-        })),
-      ),
-    );
-
-    this.logger.log(`Se sembraron ${UBICACIONES_SEMILLA.length} configuraciones de ubicación en TypeORM.`);
+    await dataSource.query(`
+      update public.configuraciones_ubicacion
+      set contact_email = ''
+      where contact_email is null;
+    `);
   }
 }

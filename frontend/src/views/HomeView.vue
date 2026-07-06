@@ -6,6 +6,8 @@ const props = defineProps<{
   benefits: BenefitItem[]
   stats: StatItem[]
   bikes: BikeItem[]
+  catalogStatus: 'loading' | 'ready' | 'error'
+  catalogMessage: string
   isLoggedIn: boolean
   sessionEmail?: string
 }>()
@@ -20,6 +22,11 @@ const activeBikeIndex = ref(0)
 const activeBike = computed(() => props.bikes[activeBikeIndex.value] ?? props.bikes[0])
 const carouselProgress = computed(() =>
   `${String(activeBikeIndex.value + 1).padStart(2, '0')} / ${String(props.bikes.length).padStart(2, '0')}`,
+)
+const emptyCatalogMessage = computed(() =>
+  props.catalogStatus === 'loading'
+    ? 'Cargando catálogo...'
+    : props.catalogMessage || 'El catálogo no está disponible en este momento.',
 )
 
 function goToBike(index: number) {
@@ -215,6 +222,13 @@ function reserveCurrentBike() {
             </div>
           </div>
         </transition>
+      </div>
+
+      <div v-else class="container home-bikes__empty">
+        <article class="home-bikes__empty-card">
+          <strong>Catálogo no disponible</strong>
+          <p>{{ emptyCatalogMessage }}</p>
+        </article>
       </div>
 
       <div class="home-bikes__bottom-strip" aria-hidden="true" />
@@ -547,6 +561,31 @@ function reserveCurrentBike() {
   gap: 2rem;
   padding-top: 0.9rem;
   align-items: center;
+}
+
+.home-bikes__empty {
+  position: relative;
+  z-index: 1;
+  padding-bottom: 2rem;
+}
+
+.home-bikes__empty-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.35rem;
+  border: 1px solid rgba(19, 33, 41, 0.08);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 35px rgba(19, 33, 41, 0.08);
+}
+
+.home-bikes__empty-card strong,
+.home-bikes__empty-card p {
+  margin: 0;
+}
+
+.home-bikes__empty-card p {
+  color: var(--ink-soft);
 }
 
 .home-bikes__bottom-strip {

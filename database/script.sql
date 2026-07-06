@@ -8,6 +8,8 @@
 -- Nota:
 -- En Supabase ya existe la base PostgreSQL administrada.
 -- Este archivo no crea la base; solo define el cimiento.
+-- Está pensado para poder reejecutarse sin borrar usuarios,
+-- reservas ni otra data operativa existente.
 
 -- =========================================================
 -- 1. Extensiones
@@ -96,6 +98,8 @@ create table if not exists public.configuraciones_ubicacion (
   subtitulo text not null,
   direccion varchar(220) not null,
   horario varchar(120) not null,
+  contact_phone varchar(40) not null default '',
+  contact_email varchar(180) not null default '',
   etiqueta_cta varchar(80) not null,
   url_externa varchar(255) not null,
   url_imagen varchar(255),
@@ -124,6 +128,32 @@ alter table if exists public.usuarios
 alter table if exists public.reservas
   alter column telefono_cliente drop not null;
 
+alter table if exists public.configuraciones_ubicacion
+  add column if not exists contact_phone varchar(40) not null default '';
+
+alter table if exists public.configuraciones_ubicacion
+  add column if not exists contact_email varchar(180) not null default '';
+
+update public.configuraciones_ubicacion
+set contact_phone = ''
+where contact_phone is null;
+
+update public.configuraciones_ubicacion
+set contact_email = ''
+where contact_email is null;
+
+alter table if exists public.configuraciones_ubicacion
+  alter column contact_phone set default '';
+
+alter table if exists public.configuraciones_ubicacion
+  alter column contact_email set default '';
+
+alter table if exists public.configuraciones_ubicacion
+  alter column contact_phone set not null;
+
+alter table if exists public.configuraciones_ubicacion
+  alter column contact_email set not null;
+
 -- =========================================================
 -- 3. Índices sugeridos
 -- =========================================================
@@ -136,46 +166,11 @@ create index if not exists idx_reservas_estado on public.reservas(estado);
 create index if not exists idx_contactos_estado on public.mensajes_contacto(estado);
 
 -- =========================================================
--- 4. Seeds mínimos opcionales
+-- 4. Aprovisionamiento inicial manual
 -- =========================================================
--- Insertar aquí datos iniciales solo si el equipo de BD lo desea.
--- Se recomienda sembrar:
--- - 1 usuario cliente
--- - 1 usuario administración
--- - 4 bicicletas base
--- - 1 configuración de ubicación
---
--- Credenciales sugeridas para pruebas de auth real:
--- - cliente@easybike.com / Cliente123!
--- - admin@easybike.com / Admin123!
---
--- insert into public.usuarios (
---   id,
---   email,
---   nombre_completo,
---   rol,
---   telefono,
---   password_hash,
---   activo
--- ) values
--- (
---   '0f2e9953-3d20-478f-a1c4-8ea5db5d1001',
---   'cliente@easybike.com',
---   'Valeria Torres',
---   'cliente',
---   '+505 8913-4973',
---   'scrypt$2d35ece34f6104377577ae07a40fa339$31fc9c9103ab03126ae9f286f1137b9e0f0247dcf6099f1b5113b3bbfb688301617f8cb3d5ade43a61edff4f9b231148389c22f2e0f14ce544580b44810890a5',
---   true
--- ),
--- (
---   '9e3d4af9-2d37-4af3-a703-443bcd741002',
---   'admin@easybike.com',
---   'Carlos Mendoza',
---   'administracion',
---   '+505 8913-0000',
---   'scrypt$e843dd2a2777ccb038f4e80b7f46f166$88c08f446280628ee78b717283e587cd0edc4af16857b0d6ae558c99b902a0cc6506430a065f73e1c996d740ce941f3d9c7b00eed8e6d0459c1f6cc72e06ae3a',
---   true
--- );
+-- La aplicación no debe sembrar usuarios, bicicletas, reservas ni ubicaciones al iniciar.
+-- Si la base está vacía, aprovisiona manualmente aquí o desde herramientas administrativas.
+-- Este script no incluye DROP, TRUNCATE ni DELETE sobre usuarios o reservas existentes.
 
 -- =========================================================
 -- 5. Triggers sugeridos para updated_at

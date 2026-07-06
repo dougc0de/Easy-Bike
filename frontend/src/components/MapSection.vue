@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import type { LocationConfig } from '../types'
 
-defineProps<{
-  location: LocationConfig
-  apiBaseUrl: string
+const props = defineProps<{
+  location: LocationConfig | null
+  locationStatus: 'loading' | 'ready' | 'error'
+  locationMessage: string
 }>()
+
+function getDialHref(phone: string) {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`
+}
 </script>
 
 <template>
@@ -16,13 +21,13 @@ defineProps<{
       <div class="container">
         <div class="map-section__title-bar">
           <span class="map-section__title-icon">⌖</span>
-          <strong>{{ location.title }}</strong>
+          <strong>{{ location?.title ?? 'Ubicación Easy Bike' }}</strong>
         </div>
       </div>
     </div>
 
     <div class="container">
-      <div class="map-section__map">
+      <div v-if="location" class="map-section__map">
         <div
           v-if="location.imageUrl"
           class="map-section__static-image"
@@ -50,8 +55,21 @@ defineProps<{
         <div class="map-section__info">
           <strong>{{ location.address }}</strong>
           <span>{{ location.schedule }}</span>
+          <a :href="getDialHref(location.contactPhone)">{{ location.contactPhone }}</a>
+          <a :href="`mailto:${location.contactEmail}`">{{ location.contactEmail }}</a>
         </div>
       </div>
+
+      <article v-else class="map-section__unavailable">
+        <strong>Configuración no disponible</strong>
+        <p>
+          {{
+            locationStatus === 'loading'
+              ? 'Cargando la configuración pública de ubicación...'
+              : locationMessage || 'La ubicación pública aún no está configurada.'
+          }}
+        </p>
+      </article>
     </div>
   </section>
 </template>
@@ -223,9 +241,34 @@ defineProps<{
   margin: 0;
 }
 
+.map-section__info a {
+  color: var(--brand-cyan-deep);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .map-section__info span {
   color: var(--ink-soft);
   font-size: 0.95rem;
+}
+
+.map-section__unavailable {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 220px;
+  padding: 1.3rem;
+  border: 1px solid rgba(19, 33, 41, 0.08);
+  background: #f7fbfb;
+  box-shadow: 0 16px 34px rgba(19, 33, 41, 0.08);
+}
+
+.map-section__unavailable strong,
+.map-section__unavailable p {
+  margin: 0;
+}
+
+.map-section__unavailable p {
+  color: var(--ink-soft);
 }
 
 @media (max-width: 760px) {

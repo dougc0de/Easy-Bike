@@ -75,7 +75,7 @@ async function onSubmit() {
           </p>
 
           <div class="register-hero__notice">
-            <strong>Registro real listo para pruebas</strong>
+            <strong>Registro conectado al backend</strong>
             <p>Este formulario ya trabaja con la API para crear usuarios cliente con autenticación real.</p>
           </div>
 

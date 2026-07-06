@@ -22,6 +22,16 @@ export class ActualizarUbicacionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(40)
+  telefonoContacto?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(180)
+  emailContacto?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   etiquetaCta?: string;
 

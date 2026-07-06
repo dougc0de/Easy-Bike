@@ -1,16 +1,13 @@
 import { Module, Provider } from '@nestjs/common';
 import { BicicletasModule } from '../bicicletas/bicicletas.module';
 import { REPOSITORIO_RESERVAS } from '../comun/constantes/tokens-repositorios';
-import { obtenerModoDatos } from '../comun/utilidades/entorno.util';
 import { ReservasController } from './reservas.controller';
-import { ReservasMemoriaRepositorio } from './repositorios/reservas-memoria.repositorio';
 import { ReservasTypeormRepositorio } from './repositorios/reservas-typeorm.repositorio';
 import { ReservasService } from './reservas.service';
 
 const proveedorRepositorioReservas: Provider = {
   provide: REPOSITORIO_RESERVAS,
-  useClass:
-    obtenerModoDatos() === 'typeorm' ? ReservasTypeormRepositorio : ReservasMemoriaRepositorio,
+  useClass: ReservasTypeormRepositorio,
 };
 
 @Module({
@@ -18,7 +15,6 @@ const proveedorRepositorioReservas: Provider = {
   controllers: [ReservasController],
   providers: [
     ReservasService,
-    ReservasMemoriaRepositorio,
     ReservasTypeormRepositorio,
     proveedorRepositorioReservas,
   ],

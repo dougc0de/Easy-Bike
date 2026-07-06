@@ -1,4 +1,4 @@
-export type ModoDatos = 'memoria' | 'typeorm';
+export type ModoDatos = 'typeorm';
 export type TipoConexionBaseDatos = 'pooler' | 'directa' | 'ninguna';
 const PATRON_PREVIEW_VERCEL_EASY_BIKE = /^https:\/\/easy-bike-[a-z0-9-]+\.vercel\.app$/i;
 
@@ -12,14 +12,14 @@ export function obtenerModoDatos(): ModoDatos {
   const valor = obtenerVariableEntorno('MODO_DATOS')?.toLowerCase();
 
   if (!valor) {
-    return 'memoria';
+    return 'typeorm';
   }
 
-  if (valor === 'memoria' || valor === 'typeorm') {
+  if (valor === 'typeorm') {
     return valor;
   }
 
-  throw new Error(`MODO_DATOS inválido: "${valor}". Usa "memoria" o "typeorm".`);
+  throw new Error(`MODO_DATOS inválido: "${valor}". Usa únicamente "typeorm".`);
 }
 
 export function obtenerBanderaBooleana(valor: string | undefined, valorPorDefecto = false): boolean {
@@ -130,7 +130,7 @@ export function validarConfiguracionCriticaProduccion() {
     faltantes.push('JWT_REFRESH_SECRET');
   }
 
-  if (modoDatos === 'typeorm' && !conexionBaseDatos.url) {
+  if (!conexionBaseDatos.url) {
     faltantes.push('DATABASE_URL_POOLER o DATABASE_URL');
   }
 

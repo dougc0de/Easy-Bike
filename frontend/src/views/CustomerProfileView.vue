@@ -6,6 +6,7 @@ import {
   NICARAGUA_PHONE_MAX_LENGTH,
   NICARAGUA_PHONE_PLACEHOLDER,
 } from '../utils/phone'
+import { isUuid } from '../utils/uuid'
 import { submitReservation } from '../services/siteApi'
 import type {
   AuthSession,
@@ -20,6 +21,10 @@ const props = defineProps<{
   session: AuthSession
   bikes: BikeItem[]
   reservations: ReservationSummary[]
+  catalogStatus: 'loading' | 'ready' | 'error'
+  catalogMessage: string
+  reservationsStatus: 'idle' | 'loading' | 'ready' | 'error'
+  reservationsMessage: string
 }>()
 
 const emit = defineEmits<{
@@ -50,7 +55,11 @@ const form = reactive<ReservationPayload>({
 })
 
 const reservableBikes = computed(() =>
-  props.bikes.filter((bike) => bike.availability === 'Disponible' || bike.availability === 'Últimas unidades'),
+  props.bikes.filter(
+    (bike) =>
+      isUuid(bike.id) &&
+      (bike.availability === 'Disponible' || bike.availability === 'Últimas unidades'),
+  ),
 )
 
 const selectedBike = computed(
@@ -293,6 +302,10 @@ async function onSubmit() {
             <h2 class="section-title">Elige una bicicleta y confirma tu horario.</h2>
         </div>
 
+        <p v-if="catalogMessage" class="customer-section__notice" :class="{ 'is-error': catalogStatus === 'error' }">
+          {{ catalogMessage }}
+        </p>
+
         <div class="customer-booking__grid">
           <div class="customer-bike">
 
@@ -484,6 +497,14 @@ async function onSubmit() {
             <span class="eyebrow">Reservas activas</span>
             <h2 class="section-title">Seguimiento rápido de tus solicitudes.</h2>
           </div>
+
+          <p
+            v-if="reservationsMessage"
+            class="customer-section__notice"
+            :class="{ 'is-error': reservationsStatus === 'error' }"
+          >
+            {{ reservationsMessage }}
+          </p>
 
           <div v-if="activeReservations.length" class="customer-history__list">
             <article
@@ -688,6 +709,18 @@ async function onSubmit() {
   display: grid;
   gap: 1.5rem;
   align-items: start;
+}
+
+.customer-section__notice {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid rgba(45, 168, 193, 0.9);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink-soft);
+}
+
+.customer-section__notice.is-error {
+  border-left-color: rgba(188, 69, 69, 0.9);
 }
 
 .customer-bike {

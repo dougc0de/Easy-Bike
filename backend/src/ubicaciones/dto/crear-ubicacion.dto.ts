@@ -17,6 +17,14 @@ export class CrearUbicacionDto {
   horario!: string;
 
   @IsString()
+  @MaxLength(40)
+  telefonoContacto!: string;
+
+  @IsString()
+  @MaxLength(180)
+  emailContacto!: string;
+
+  @IsString()
   @MaxLength(80)
   etiquetaCta!: string;
 

@@ -17,6 +17,12 @@ export class ConfiguracionUbicacionEntidad {
   @Column({ name: 'horario', type: 'varchar', length: 120 })
   horario!: string;
 
+  @Column({ name: 'contact_phone', type: 'varchar', length: 40, default: '' })
+  telefonoContacto!: string;
+
+  @Column({ name: 'contact_email', type: 'varchar', length: 180, default: '' })
+  emailContacto!: string;
+
   @Column({ name: 'etiqueta_cta', type: 'varchar', length: 80 })
   etiquetaCta!: string;
 

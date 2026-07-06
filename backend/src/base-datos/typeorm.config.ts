@@ -16,7 +16,7 @@ export function crearOpcionesTypeOrm(configService: ConfigService): TypeOrmModul
 
   if (!databaseUrl) {
     throw new Error(
-      'MODO_DATOS=typeorm requiere DATABASE_URL o DATABASE_URL_POOLER configurada para conectar con Supabase PostgreSQL.',
+      'DATABASE_URL o DATABASE_URL_POOLER es obligatoria para conectar Easy Bike con Supabase PostgreSQL.',
     );
   }
 

@@ -14,19 +14,17 @@ import AdminPanelView from './views/AdminPanelView.vue'
 import {
   aboutMilestones,
   aboutValues,
-  bikeCatalog,
-  contactCards,
   footerColumns,
   footerMeta,
   homeBenefits,
   homeStats,
-  locationConfig,
   loginHighlights,
   navigationItems,
 } from './data/siteContent'
 import {
   fetchBikeCatalog,
   fetchCurrentSession,
+  fetchPublicLocationConfig,
   fetchReservationsForSession,
   hasStoredAccessToken,
   logoutUser,
@@ -36,14 +34,16 @@ import type {
   AuthRole,
   AuthSession,
   BikeItem,
+  LocationConfig,
   NavigationItem,
   PageId,
   ReservationSummary,
 } from './types'
 
 const AUTH_STORAGE_KEY = 'easybike-auth-session'
-const BIKES_STORAGE_KEY = 'easybike-catalog'
-const RESERVATIONS_STORAGE_KEY = 'easybike-reservations'
+type CatalogLoadStatus = 'loading' | 'ready' | 'error'
+type ReservationsLoadStatus = 'idle' | 'loading' | 'ready' | 'error'
+type LocationLoadStatus = 'loading' | 'ready' | 'error'
 
 const routes: Record<PageId, string> = {
   inicio: '#/inicio',
@@ -57,11 +57,17 @@ const routes: Record<PageId, string> = {
 }
 
 const currentPage = ref<PageId>('inicio')
-const apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3000'
 const authSession = ref<AuthSession | null>(loadAuthSession())
 const appReady = ref(false)
-const bikes = ref<BikeItem[]>(loadStoredCollection(BIKES_STORAGE_KEY, bikeCatalog))
-const reservations = ref<ReservationSummary[]>(loadStoredCollection(RESERVATIONS_STORAGE_KEY, []))
+const bikes = ref<BikeItem[]>([])
+const reservations = ref<ReservationSummary[]>([])
+const publicLocationConfig = ref<LocationConfig | null>(null)
+const catalogStatus = ref<CatalogLoadStatus>('loading')
+const catalogMessage = ref('')
+const reservationsStatus = ref<ReservationsLoadStatus>('idle')
+const reservationsMessage = ref('')
+const locationStatus = ref<LocationLoadStatus>('loading')
+const locationMessage = ref('')
 const loginEntryMessage = ref('')
 const enableScrollReveal =
   typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -115,29 +121,6 @@ function resolvePage(hash: string): PageId {
 
 function isAuthRole(value: unknown): value is AuthRole {
   return value === 'cliente' || value === 'administracion'
-}
-
-function cloneCollection<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
-}
-
-function loadStoredCollection<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return cloneCollection(fallback)
-
-  const storedValue = window.localStorage.getItem(key)
-
-  if (!storedValue) return cloneCollection(fallback)
-
-  try {
-    return JSON.parse(storedValue) as T
-  } catch {
-    window.localStorage.removeItem(key)
-    return cloneCollection(fallback)
-  }
-}
-
-function persistStoredCollection<T>(key: string, value: T) {
-  window.localStorage.setItem(key, JSON.stringify(value))
 }
 
 function resolveAccessiblePage(page: PageId): PageId {
@@ -228,6 +211,19 @@ function clearAuthSession() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY)
 }
 
+function hasOperationalLocationConfig(config: LocationConfig) {
+  return [
+    config.title,
+    config.subtitle,
+    config.address,
+    config.schedule,
+    config.contactPhone,
+    config.contactEmail,
+    config.ctaLabel,
+    config.externalUrl,
+  ].every((value) => value.trim().length > 0)
+}
+
 async function bootstrapAuthSession() {
   try {
     const result = hasStoredAccessToken()
@@ -241,13 +237,25 @@ async function bootstrapAuthSession() {
     authSession.value = null
     clearAuthSession()
     reservations.value = []
+    reservationsStatus.value = 'idle'
+    reservationsMessage.value = ''
   }
 }
 
 async function hydrateBikesFromApi() {
+  catalogStatus.value = 'loading'
+  catalogMessage.value = ''
+
   try {
-    bikes.value = await fetchBikeCatalog()
+    const catalog = await fetchBikeCatalog()
+    bikes.value = catalog
+    catalogStatus.value = 'ready'
+    catalogMessage.value = catalog.length ? '' : 'Aún no hay bicicletas publicadas en el catálogo.'
   } catch (error) {
+    bikes.value = []
+    catalogStatus.value = 'error'
+    catalogMessage.value =
+      error instanceof Error ? error.message : 'No se pudo cargar el catálogo desde la API.'
     console.error('No se pudo cargar el catálogo desde la API.', error)
   }
 }
@@ -255,14 +263,52 @@ async function hydrateBikesFromApi() {
 async function hydrateReservationsFromApi(session: AuthSession | null) {
   if (!session) {
     reservations.value = []
+    reservationsStatus.value = 'idle'
+    reservationsMessage.value = ''
     return
   }
 
+  reservationsStatus.value = 'loading'
+  reservationsMessage.value = ''
+
   try {
     reservations.value = await fetchReservationsForSession(session)
+    reservationsStatus.value = 'ready'
   } catch (error) {
     reservations.value = []
+    reservationsStatus.value = 'error'
+    reservationsMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'No se pudieron cargar las reservas vinculadas a esta sesión.'
     console.error('No se pudieron cargar las reservas desde la API.', error)
+  }
+}
+
+async function hydratePublicLocationConfigFromApi() {
+  locationStatus.value = 'loading'
+  locationMessage.value = ''
+
+  try {
+    const location = await fetchPublicLocationConfig()
+
+    if (!hasOperationalLocationConfig(location)) {
+      publicLocationConfig.value = null
+      locationStatus.value = 'error'
+      locationMessage.value = 'La configuración pública de ubicación aún no está completa.'
+      return
+    }
+
+    publicLocationConfig.value = location
+    locationStatus.value = 'ready'
+  } catch (error) {
+    publicLocationConfig.value = null
+    locationStatus.value = 'error'
+    locationMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'No se pudo cargar la configuración pública de ubicación.'
+    console.error('No se pudo cargar la configuración pública de ubicación.', error)
   }
 }
 
@@ -392,22 +438,6 @@ function scheduleScrollRevealRegistration() {
 }
 
 watch(
-  bikes,
-  (value) => {
-    persistStoredCollection(BIKES_STORAGE_KEY, value)
-  },
-  { deep: true },
-)
-
-watch(
-  reservations,
-  (value) => {
-    persistStoredCollection(RESERVATIONS_STORAGE_KEY, value)
-  },
-  { deep: true },
-)
-
-watch(
   [currentPage, showMapSection],
   async () => {
     await nextTick()
@@ -417,8 +447,11 @@ watch(
 )
 
 onMounted(async () => {
-  await hydrateBikesFromApi()
-  await bootstrapAuthSession()
+  await Promise.all([
+    hydrateBikesFromApi(),
+    hydratePublicLocationConfigFromApi(),
+    bootstrapAuthSession(),
+  ])
   ensureInitialRoute()
   window.addEventListener('hashchange', syncPageWithHash)
   scheduleScrollRevealRegistration()
@@ -451,6 +484,8 @@ onBeforeUnmount(() => {
         :benefits="homeBenefits"
         :stats="homeStats"
         :bikes="homePreviewBikes"
+        :catalog-status="catalogStatus"
+        :catalog-message="catalogMessage"
         :is-logged-in="Boolean(authSession)"
         :session-email="authSession?.email ?? ''"
         @navigate="openPage"
@@ -460,6 +495,8 @@ onBeforeUnmount(() => {
       <BikesView
         v-else-if="currentPage === 'bicicletas'"
         :bikes="bikes"
+        :catalog-status="catalogStatus"
+        :catalog-message="catalogMessage"
         :is-logged-in="Boolean(authSession)"
         :session-email="authSession?.email ?? ''"
         :session-name="authSession?.name ?? ''"
@@ -476,7 +513,9 @@ onBeforeUnmount(() => {
 
       <ContactView
         v-else-if="currentPage === 'contactanos'"
-        :contact-cards="contactCards"
+        :location="publicLocationConfig"
+        :location-status="locationStatus"
+        :location-message="locationMessage"
       />
 
       <CustomerProfileView
@@ -484,6 +523,10 @@ onBeforeUnmount(() => {
         :session="authSession"
         :bikes="bikes"
         :reservations="reservations"
+        :catalog-status="catalogStatus"
+        :catalog-message="catalogMessage"
+        :reservations-status="reservationsStatus"
+        :reservations-message="reservationsMessage"
         @navigate="openPage"
         @reservation-created="handleReservationCreated"
       />
@@ -493,6 +536,10 @@ onBeforeUnmount(() => {
         :session="authSession"
         :bikes="bikes"
         :reservations="reservations"
+        :catalog-status="catalogStatus"
+        :catalog-message="catalogMessage"
+        :reservations-status="reservationsStatus"
+        :reservations-message="reservationsMessage"
         @bike-created="handleBikeCreated"
         @availability-updated="handleAvailabilityUpdated"
         @reservation-created="handleReservationCreated"
@@ -526,8 +573,9 @@ onBeforeUnmount(() => {
 
     <MapSection
       v-if="showMapSection"
-      :location="locationConfig"
-      :api-base-url="apiBaseUrl"
+      :location="publicLocationConfig"
+      :location-status="locationStatus"
+      :location-message="locationMessage"
     />
 
     <SiteFooter

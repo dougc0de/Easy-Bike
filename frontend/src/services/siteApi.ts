@@ -3,6 +3,7 @@ import type {
   BikeItem,
   ContactPayload,
   LoginPayload,
+  LocationConfig,
   RegisterPayload,
   ReservationPayload,
   ReservationSummary,
@@ -81,6 +82,19 @@ interface ContactApiResponse {
   message: string
 }
 
+interface LocationConfigApiResponse {
+  title: string
+  subtitle: string
+  address: string
+  schedule: string
+  contactPhone: string
+  contactEmail: string
+  ctaLabel: string
+  externalUrl: string
+  imageUrl: string
+  embedUrl: string
+}
+
 interface SubmitReservationOptions {
   mode?: 'cliente' | 'admin-store'
 }
@@ -138,6 +152,21 @@ function mapApiReservation(reservation: ReservationApiResponse): ReservationSumm
     voucherCode: reservation.voucherCode,
     paymentMethod: reservation.paymentMethod,
     createdAt: reservation.createdAt,
+  }
+}
+
+function mapApiLocationConfig(config: LocationConfigApiResponse): LocationConfig {
+  return {
+    title: config.title,
+    subtitle: config.subtitle,
+    address: config.address,
+    schedule: config.schedule,
+    contactPhone: config.contactPhone,
+    contactEmail: config.contactEmail,
+    ctaLabel: config.ctaLabel,
+    externalUrl: config.externalUrl,
+    imageUrl: config.imageUrl,
+    embedUrl: config.embedUrl,
   }
 }
 
@@ -224,6 +253,14 @@ export async function fetchBikeCatalog() {
   })
 
   return result.map((bike) => mapApiBike(bike))
+}
+
+export async function fetchPublicLocationConfig() {
+  const result = await apiRequest<LocationConfigApiResponse>('/ubicaciones/configuracion-mapa', {
+    method: 'GET',
+  })
+
+  return mapApiLocationConfig(result)
 }
 
 export async function fetchReservationsForSession(session: AuthSession) {

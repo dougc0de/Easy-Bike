@@ -49,14 +49,6 @@ export interface AuthSession {
   name: string
 }
 
-export interface MockUser {
-  email: string
-  password: string
-  role: AuthRole
-  name: string
-  createdAt?: string
-}
-
 export interface FooterLink {
   label: string
   href?: string
@@ -79,6 +71,8 @@ export interface LocationConfig {
   subtitle: string
   address: string
   schedule: string
+  contactPhone: string
+  contactEmail: string
   ctaLabel: string
   externalUrl: string
   imageUrl: string
@@ -94,12 +88,6 @@ export interface MilestoneItem {
   year: string
   title: string
   description: string
-}
-
-export interface ContactCard {
-  title: string
-  value: string
-  note: string
 }
 
 export interface LoginHighlight {

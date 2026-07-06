@@ -1,22 +1,95 @@
+import { Global, INestApplication, Module, ValidationPipe } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { AdministracionModule } from '../src/administracion/administracion.module';
+import { AppController } from '../src/app.controller';
+import { AppService } from '../src/app.service';
+import { AutenticacionModule } from '../src/autenticacion/autenticacion.module';
+import { BaseDatosService } from '../src/base-datos/base-datos.service';
+import { BicicletasModule } from '../src/bicicletas/bicicletas.module';
+import {
+  REPOSITORIO_BICICLETAS,
+  REPOSITORIO_CONTACTOS,
+  REPOSITORIO_RESERVAS,
+  REPOSITORIO_UBICACIONES,
+  REPOSITORIO_USUARIOS,
+} from '../src/comun/constantes/tokens-repositorios';
+import { ContactosModule } from '../src/contactos/contactos.module';
+import { ReservasModule } from '../src/reservas/reservas.module';
+import { SaludModule } from '../src/salud/salud.module';
+import { UbicacionesModule } from '../src/ubicaciones/ubicaciones.module';
+import { UsuariosModule } from '../src/usuarios/usuarios.module';
+import {
+  createTestRepositoryBundle,
+  TestRepositoryBundle,
+} from './support/in-memory-repositories';
 
-process.env.MODO_DATOS = 'memoria';
+process.env.MODO_DATOS = 'typeorm';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret-pruebas-easy-bike';
 process.env.JWT_REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET || 'jwt-refresh-secret-pruebas-easy-bike';
 
-const { AppModule } = require('./../src/app.module');
+const baseDatosServicePrueba: Pick<
+  BaseDatosService,
+  'obtenerModo' | 'estaConfigurada' | 'estaInicializada' | 'obtenerTipoConexionConfigurada'
+> = {
+  obtenerModo: () => 'typeorm',
+  estaConfigurada: () => true,
+  estaInicializada: () => true,
+  obtenerTipoConexionConfigurada: () => 'pooler',
+};
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: BaseDatosService,
+      useValue: baseDatosServicePrueba,
+    },
+  ],
+  exports: [BaseDatosService],
+})
+class TestBaseDatosModule {}
 
 describe('Easy Bike API (e2e)', () => {
   let app: INestApplication<App>;
+  let repositorios: TestRepositoryBundle;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    repositorios = await createTestRepositoryBundle();
+
+    const moduleBuilder = Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+        }),
+        TestBaseDatosModule,
+        AutenticacionModule,
+        SaludModule,
+        UsuariosModule,
+        BicicletasModule,
+        ReservasModule,
+        ContactosModule,
+        UbicacionesModule,
+        AdministracionModule,
+      ],
+      controllers: [AppController],
+      providers: [AppService],
+    })
+      .overrideProvider(REPOSITORIO_USUARIOS)
+      .useValue(repositorios.usuariosRepo)
+      .overrideProvider(REPOSITORIO_BICICLETAS)
+      .useValue(repositorios.bicicletasRepo)
+      .overrideProvider(REPOSITORIO_RESERVAS)
+      .useValue(repositorios.reservasRepo)
+      .overrideProvider(REPOSITORIO_CONTACTOS)
+      .useValue(repositorios.contactosRepo)
+      .overrideProvider(REPOSITORIO_UBICACIONES)
+      .useValue(repositorios.ubicacionesRepo);
+
+    const moduleFixture: TestingModule = await moduleBuilder.compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -26,6 +99,7 @@ describe('Easy Bike API (e2e)', () => {
         forbidNonWhitelisted: true,
       }),
     );
+
     await app.init();
   });
 
@@ -52,12 +126,14 @@ describe('Easy Bike API (e2e)', () => {
       });
   });
 
-  it('GET /salud/base-datos reporta modo memoria sin DATABASE_URL', () => {
+  it('GET /salud/base-datos reporta conexión typeorm activa', () => {
     return request(app.getHttpServer())
       .get('/salud/base-datos')
       .expect(200)
       .expect(({ body }) => {
-        expect(body.mode).toBe('memoria');
+        expect(body.mode).toBe('typeorm');
+        expect(body.status).toBe('conectada');
+        expect(body.connectionType).toBe('pooler');
         expect(body.provider).toBe('supabase-postgres');
       });
   });
@@ -148,7 +224,7 @@ describe('Easy Bike API (e2e)', () => {
         email: 'nuevo@easybike.com',
         nombreCompleto: 'Nuevo Usuario',
         rol: 'cliente',
-        telefono: '+505 8888-9999',
+        telefono: '8888-9999',
         extra: 'no-permitido',
       })
       .expect(400);
@@ -160,7 +236,7 @@ describe('Easy Bike API (e2e)', () => {
         email: 'nuevo@easybike.com',
         nombreCompleto: 'Nuevo Usuario',
         rol: 'cliente',
-        telefono: '+505 8888-9999',
+        telefono: '8888-9999',
       })
       .expect(201);
 
@@ -262,6 +338,8 @@ describe('Easy Bike API (e2e)', () => {
       .expect(200)
       .expect(({ body }) => {
         expect(body.title).toBe('Encuéntranos fácilmente');
+        expect(body.contactPhone).toBe('8913-4973');
+        expect(body.contactEmail).toBe('hola@easybike.com');
         expect(body.externalUrl).toContain('google.com/maps');
       });
 
@@ -286,7 +364,23 @@ describe('Easy Bike API (e2e)', () => {
       .send({
         fullName: 'Cliente Inválido',
         email: 'intruso@correo.com',
-        phone: '+505 8111-1111',
+        phone: '8111-1111',
+        bikeId: 'not-a-uuid',
+        date: '2026-07-10',
+        time: '10:00',
+        duration: 24,
+        pickupPoint: 'Punto Central Easy Bike',
+        notes: '',
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/reservas')
+      .set('Authorization', `Bearer ${cliente.accessToken}`)
+      .send({
+        fullName: 'Cliente Inválido',
+        email: 'intruso@correo.com',
+        phone: '8111-1111',
         bikeId: '6d2feecb-1558-4a18-832a-0d5517e83001',
         date: '2026-07-10',
         time: '21:30',
@@ -302,7 +396,7 @@ describe('Easy Bike API (e2e)', () => {
       .send({
         fullName: 'Cliente Válido',
         email: 'otro@correo.com',
-        phone: '+505 8222-2222',
+        phone: '8222-2222',
         bikeId: '6d2feecb-1558-4a18-832a-0d5517e83001',
         date: '2026-07-10',
         time: '10:00',
@@ -343,7 +437,7 @@ describe('Easy Bike API (e2e)', () => {
       .send({
         fullName: 'Reserva Tienda',
         email: 'tienda@correo.com',
-        phone: '+505 8333-3333',
+        phone: '8333-3333',
         bikeId: '7d2feecb-1558-4a18-832a-0d5517e83002',
         date: '2026-07-11',
         time: '11:30',

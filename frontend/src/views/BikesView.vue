@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import BikeCard from '../components/BikeCard.vue'
 import ReservationForm from '../components/ReservationForm.vue'
 import type { BikeItem, PageId } from '../types'
+import { isUuid } from '../utils/uuid'
 
 const props = defineProps<{
   bikes: BikeItem[]
+  catalogStatus: 'loading' | 'ready' | 'error'
+  catalogMessage: string
   isLoggedIn: boolean
   sessionEmail?: string
   sessionName?: string
@@ -27,9 +30,29 @@ const filteredBikes = computed(() =>
     ? props.bikes
     : props.bikes.filter((bike) => bike.category === activeCategory.value),
 )
+const catalogNotice = computed(() =>
+  props.catalogStatus === 'loading'
+    ? 'Cargando catálogo...'
+    : props.catalogMessage || 'El catálogo no está disponible en este momento.',
+)
 
 const selectedBike = computed(
   () => props.bikes.find((bike) => bike.id === selectedBikeId.value) ?? props.bikes[0],
+)
+
+watch(
+  () => props.bikes,
+  (bikes) => {
+    const currentBike = bikes.find((bike) => bike.id === selectedBikeId.value)
+
+    if (currentBike && isUuid(currentBike.id)) {
+      return
+    }
+
+    const firstBackendBike = bikes.find((bike) => isUuid(bike.id))
+    selectedBikeId.value = firstBackendBike?.id ?? bikes[0]?.id ?? ''
+  },
+  { immediate: true },
 )
 
 async function handleBikeReserve(bikeId: string) {
@@ -87,7 +110,7 @@ function forwardLoginRequest(page: PageId, message?: string) {
       <div class="bikes-catalog__corner bikes-catalog__corner--right" aria-hidden="true" />
 
       <div class="container">
-        <div class="chip-list bikes-catalog__filters">
+        <div v-if="bikes.length" class="chip-list bikes-catalog__filters">
           <button
             v-for="category in categories"
             :key="category"
@@ -101,13 +124,20 @@ function forwardLoginRequest(page: PageId, message?: string) {
         </div>
 
         <div class="bikes-catalog__grid">
-          <BikeCard
-            v-for="bike in filteredBikes"
-            :key="bike.id"
-            :bike="bike"
-            :selected="selectedBikeId === bike.id"
-            @select="handleBikeReserve"
-          />
+          <template v-if="filteredBikes.length">
+            <BikeCard
+              v-for="bike in filteredBikes"
+              :key="bike.id"
+              :bike="bike"
+              :selected="selectedBikeId === bike.id"
+              @select="handleBikeReserve"
+            />
+          </template>
+
+          <article v-else class="bikes-catalog__empty">
+            <strong>Catálogo no disponible</strong>
+            <p>{{ catalogNotice }}</p>
+          </article>
         </div>
       </div>
     </section>
@@ -155,6 +185,8 @@ function forwardLoginRequest(page: PageId, message?: string) {
         <ReservationForm
           :bikes="bikes"
           :initial-bike-id="selectedBikeId"
+          :catalog-status="catalogStatus"
+          :catalog-message="catalogMessage"
           :is-logged-in="isLoggedIn"
           :session-email="sessionEmail"
           :session-name="sessionName"
@@ -321,6 +353,23 @@ function forwardLoginRequest(page: PageId, message?: string) {
   display: grid;
   gap: 1.25rem;
   margin-top: 1.4rem;
+}
+
+.bikes-catalog__empty {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 28px rgba(19, 33, 41, 0.08);
+}
+
+.bikes-catalog__empty strong,
+.bikes-catalog__empty p {
+  margin: 0;
+}
+
+.bikes-catalog__empty p {
+  color: var(--ink-soft);
 }
 
 .reservation-layout {

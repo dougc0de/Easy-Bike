@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CrearReservaDto {
   @IsString()
@@ -14,8 +14,7 @@ export class CrearReservaDto {
   @MaxLength(40)
   phone?: string;
 
-  @IsString()
-  @MaxLength(80)
+  @IsUUID()
   bikeId!: string;
 
   @IsString()

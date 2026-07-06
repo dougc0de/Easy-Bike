@@ -6,12 +6,15 @@ import {
   NICARAGUA_PHONE_MAX_LENGTH,
   NICARAGUA_PHONE_PLACEHOLDER,
 } from '../utils/phone'
+import { isUuid } from '../utils/uuid'
 import { submitReservation } from '../services/siteApi'
 import type { BikeItem, PageId, ReservationPayload } from '../types'
 
 const props = defineProps<{
   bikes: BikeItem[]
   initialBikeId?: string
+  catalogStatus: 'loading' | 'ready' | 'error'
+  catalogMessage: string
   isLoggedIn: boolean
   sessionEmail?: string
   sessionName?: string
@@ -24,12 +27,13 @@ const emit = defineEmits<{
 const today = new Date().toISOString().split('T')[0]
 const pickupTimeMin = '08:00'
 const pickupTimeMax = '20:00'
+const reservationReadyBikes = computed(() => props.bikes.filter((bike) => isUuid(bike.id)))
 
 const form = reactive<ReservationPayload>({
   fullName: props.sessionName ?? '',
   email: props.sessionEmail ?? '',
   phone: '',
-  bikeId: props.initialBikeId ?? props.bikes[0]?.id ?? '',
+  bikeId: props.initialBikeId ?? reservationReadyBikes.value[0]?.id ?? '',
   date: '',
   time: '',
   duration: '24',
@@ -42,10 +46,18 @@ const feedback = ref('')
 const feedbackType = ref<'success' | 'error'>('success')
 
 watch(
-  () => props.initialBikeId,
-  (value) => {
-    if (value) form.bikeId = value
+  [() => props.initialBikeId, reservationReadyBikes],
+  ([initialBikeId, bikes]) => {
+    if (initialBikeId && bikes.some((bike) => bike.id === initialBikeId)) {
+      form.bikeId = initialBikeId
+      return
+    }
+
+    if (!bikes.some((bike) => bike.id === form.bikeId)) {
+      form.bikeId = bikes[0]?.id ?? ''
+    }
   },
+  { immediate: true },
 )
 
 watch(
@@ -68,7 +80,12 @@ watch(
   { immediate: true },
 )
 
-const selectedBike = computed(() => props.bikes.find((bike) => bike.id === form.bikeId))
+const selectedBike = computed(() => reservationReadyBikes.value.find((bike) => bike.id === form.bikeId))
+const reservationStatusMessage = computed(() =>
+  props.catalogStatus === 'loading'
+    ? 'Cargando bicicletas disponibles desde el backend...'
+    : props.catalogMessage || 'No hay bicicletas válidas cargadas desde el backend para reservar.',
+)
 
 function parseTimeToMinutes(value: string) {
   const [hoursPart = '', minutesPart = ''] = value.split(':')
@@ -107,9 +124,9 @@ async function onSubmit() {
     return
   }
 
-  if (!form.fullName || !form.email || !form.phone || !form.bikeId || !form.date || !form.time) {
+  if (!form.fullName || !form.email || !form.bikeId || !form.date || !form.time) {
     feedbackType.value = 'error'
-    feedback.value = 'Completa los campos obligatorios para simular la reserva.'
+    feedback.value = 'Completa los campos obligatorios para confirmar la reserva.'
     return
   }
 
@@ -121,7 +138,7 @@ async function onSubmit() {
 
   if (!selectedBike.value) {
     feedbackType.value = 'error'
-    feedback.value = 'Selecciona una bicicleta disponible antes de continuar.'
+    feedback.value = 'No hay una bicicleta válida sincronizada con el backend para completar la reserva.'
     return
   }
 
@@ -162,6 +179,11 @@ async function onSubmit() {
       <span class="reservation-box__summary-label">Modelo seleccionado</span>
       <strong>{{ selectedBike.name }}</strong>
       <small>{{ selectedBike.price }} · {{ selectedBike.autonomy }}</small>
+    </div>
+
+    <div v-else class="reservation-box__summary reservation-box__summary--empty">
+      <strong>Reserva temporalmente no disponible</strong>
+      <small>{{ reservationStatusMessage }}</small>
     </div>
 
     <div class="reservation-box__session" :class="isLoggedIn ? 'is-active' : 'is-pending'">
@@ -262,7 +284,7 @@ async function onSubmit() {
       </div>
 
       <div class="reservation-box__actions">
-        <button class="primary-button" type="submit" :disabled="isSubmitting">
+        <button class="primary-button" type="submit" :disabled="isSubmitting || !selectedBike">
           {{ isSubmitting ? 'Procesando...' : isLoggedIn ? 'Confirmar reserva' : 'Inicia sesión para reservar' }}
         </button>
 
@@ -321,6 +343,14 @@ async function onSubmit() {
 .reservation-box__summary small {
   color: var(--brand-cyan-deep);
   font-weight: 700;
+}
+
+.reservation-box__summary--empty {
+  background: rgba(242, 135, 5, 0.12);
+}
+
+.reservation-box__summary--empty small {
+  color: var(--ink-soft);
 }
 
 .reservation-box__session {

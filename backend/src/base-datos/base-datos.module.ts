@@ -1,10 +1,7 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import {
-  obtenerConfiguracionConexionBaseDatos,
-  obtenerModoDatos,
-} from '../comun/utilidades/entorno.util';
+import { obtenerConfiguracionConexionBaseDatos } from '../comun/utilidades/entorno.util';
 import { BaseDatosService } from './base-datos.service';
 import { InicializacionDatosService } from './inicializacion-datos.service';
 import { crearOpcionesTypeOrm } from './typeorm.config';
@@ -13,26 +10,22 @@ import { crearOpcionesTypeOrm } from './typeorm.config';
 @Module({})
 export class BaseDatosModule {
   static registrar(): DynamicModule {
-    const modo = obtenerModoDatos();
     const conexionBaseDatos = obtenerConfiguracionConexionBaseDatos();
 
-    if (modo === 'typeorm' && !conexionBaseDatos.url) {
+    if (!conexionBaseDatos.url) {
       throw new Error(
-        'MODO_DATOS=typeorm requiere DATABASE_URL o DATABASE_URL_POOLER. Completa la conexión con Supabase antes de iniciar.',
+        'Easy Bike requiere DATABASE_URL o DATABASE_URL_POOLER para iniciar la conexión con Supabase PostgreSQL.',
       );
     }
 
     return {
       module: BaseDatosModule,
-      imports:
-        modo === 'typeorm'
-          ? [
-              TypeOrmModule.forRootAsync({
-                inject: [ConfigService],
-                useFactory: (configService: ConfigService) => crearOpcionesTypeOrm(configService),
-              }),
-            ]
-          : [],
+      imports: [
+        TypeOrmModule.forRootAsync({
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService) => crearOpcionesTypeOrm(configService),
+        }),
+      ],
       providers: [BaseDatosService, InicializacionDatosService],
       exports: [BaseDatosService],
     };

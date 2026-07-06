@@ -223,7 +223,7 @@ export class ReservasService {
       amount: creada.monto,
       voucher,
       message:
-        'Reserva simulada correctamente. Tu voucher ya queda listo para mostrarlo al retirar la bicicleta. Recuerda que el pago se hace físicamente al retirar la bicicleta.',
+        'Reserva registrada correctamente. Tu voucher ya queda listo para mostrarlo al retirar la bicicleta. Recuerda que el pago se hace físicamente al retirar la bicicleta.',
       reservation: creada,
     };
   }

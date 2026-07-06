@@ -6,7 +6,7 @@ export class AppService {
     return {
       name: 'Easy Bike API',
       status: 'ok',
-      message: 'Backend formal listo para modulos de negocio, DTOs y futura integracion con Supabase.',
+      message: 'API operativa para autenticación, catálogo, reservas, contactos y administración.',
       docs: {
         salud: '/salud',
         baseDatos: '/salud/base-datos',

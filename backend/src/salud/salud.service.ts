@@ -15,33 +15,23 @@ export class SaludService {
   }
 
   obtenerEstadoBaseDatos() {
-    const modo = this.baseDatosService.obtenerModo();
     const configurada = this.baseDatosService.estaConfigurada();
     const inicializada = this.baseDatosService.estaInicializada();
     const tipoConexion = this.baseDatosService.obtenerTipoConexionConfigurada();
 
     return {
-      status:
-        modo === 'memoria'
-          ? 'memoria'
-          : configurada && inicializada
-            ? 'conectada'
-            : configurada
-              ? 'pendiente'
-              : 'no-configurada',
-      mode: modo,
+      status: configurada && inicializada ? 'conectada' : configurada ? 'pendiente' : 'no-configurada',
+      mode: this.baseDatosService.obtenerModo(),
       provider: 'supabase-postgres',
       connectionType: tipoConexion,
       configured: configurada,
       connected: inicializada,
       message:
-        modo === 'memoria'
-          ? 'La aplicación corre con persistencia en memoria. TypeORM queda listo para activarse con Supabase.'
-          : configurada
-            ? tipoConexion === 'pooler'
-              ? 'TypeORM está configurado con Supabase usando la conexión pooler, ideal para despliegues como Render.'
-              : 'TypeORM está configurado para PostgreSQL/Supabase con conexión directa. Usa DATABASE_URL_POOLER en Render solo si la red no alcanza la conexión directa.'
-            : 'Falta completar DATABASE_URL o DATABASE_URL_POOLER para habilitar la conexión TypeORM con Supabase.',
+        configurada
+          ? tipoConexion === 'pooler'
+            ? 'TypeORM está conectado a Supabase usando la conexión pooler.'
+            : 'TypeORM está configurado para PostgreSQL/Supabase con conexión directa.'
+          : 'Falta completar DATABASE_URL o DATABASE_URL_POOLER para habilitar la conexión TypeORM con Supabase.',
     };
   }
 }
