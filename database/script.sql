@@ -1,17 +1,4 @@
 -- =========================================================
--- Easy Bike - Supabase SQL Scaffold
--- =========================================================
--- Objetivo:
--- Dejar listo el esqueleto SQL para que el encargado de BD
--- complete relaciones, índices finos, RLS y endurecimiento.
---
--- Nota:
--- En Supabase ya existe la base PostgreSQL administrada.
--- Este archivo no crea la base; solo define el cimiento.
--- Está pensado para poder reejecutarse sin borrar usuarios,
--- reservas ni otra data operativa existente.
-
--- =========================================================
 -- 1. Extensiones
 -- =========================================================
 create extension if not exists pgcrypto;
