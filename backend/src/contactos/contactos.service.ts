@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { REPOSITORIO_CONTACTOS } from '../comun/constantes/tokens-repositorios';
+import { ContactosEmailService } from './contactos-email.service';
 import { ActualizarContactoDto } from './dto/actualizar-contacto.dto';
 import { CrearContactoDto } from './dto/crear-contacto.dto';
 import { ListarContactosQueryDto } from './dto/listar-contactos.query.dto';
@@ -11,6 +12,7 @@ export class ContactosService {
   constructor(
     @Inject(REPOSITORIO_CONTACTOS)
     private readonly repositorioContactos: RepositorioContactos,
+    private readonly contactosEmailService: ContactosEmailService,
   ) {}
 
   listar(query: ListarContactosQueryDto) {
@@ -30,6 +32,7 @@ export class ContactosService {
   async crear(dto: CrearContactoDto) {
     const ticket = `MSG-${Date.now().toString().slice(-5)}-${randomUUID().slice(0, 4).toUpperCase()}`;
     const contacto = await this.repositorioContactos.crear(dto, ticket);
+    await this.contactosEmailService.notificarNuevoMensaje(contacto);
 
     return {
       success: true,

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { JwtAccessGuard } from '../autenticacion/guards/jwt-access.guard';
 import { RolesGuard } from '../autenticacion/guards/roles.guard';
 import { RolUsuario } from '../comun/enums/rol-usuario.enum';
 import { ActualizarReservaDto } from './dto/actualizar-reserva.dto';
+import { ActualizarReservaClienteDto } from './dto/actualizar-reserva-cliente.dto';
 import { CrearReservaDto } from './dto/crear-reserva.dto';
 import { ListarReservasQueryDto } from './dto/listar-reservas.query.dto';
 import { Reserva } from './interfaces/reserva.interface';
@@ -81,6 +83,17 @@ export class ReservasController {
     };
   }
 
+  @Put(':id')
+  async actualizarComoCliente(
+    @Param('id') id: string,
+    @Body() dto: ActualizarReservaClienteDto,
+    @UsuarioActual() usuarioActual: UsuarioAutenticado,
+  ) {
+    const reserva = await this.reservasService.actualizarComoCliente(id, usuarioActual.email, dto);
+
+    return mapearResumenReserva(reserva);
+  }
+
   @UseGuards(JwtAccessGuard, RolesGuard)
   @Roles(RolUsuario.ADMINISTRACION)
   @Patch(':id')
@@ -90,11 +103,14 @@ export class ReservasController {
     return mapearResumenReserva(reserva);
   }
 
-  @UseGuards(JwtAccessGuard, RolesGuard)
-  @Roles(RolUsuario.ADMINISTRACION)
+  @Roles(RolUsuario.CLIENTE, RolUsuario.ADMINISTRACION)
   @Delete(':id')
-  eliminar(@Param('id') id: string) {
-    return this.reservasService.eliminar(id);
+  eliminar(@Param('id') id: string, @UsuarioActual() usuarioActual: UsuarioAutenticado) {
+    if (usuarioActual.role === RolUsuario.ADMINISTRACION) {
+      return this.reservasService.eliminar(id);
+    }
+
+    return this.reservasService.eliminarComoCliente(id, usuarioActual.email);
   }
 
   private verificarPropietarioReserva(reserva: Reserva, usuarioActual: UsuarioAutenticado) {

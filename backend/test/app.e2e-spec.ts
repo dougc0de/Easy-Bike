@@ -358,7 +358,7 @@ describe('Easy Bike API (e2e)', () => {
     const cliente = await iniciarSesion('cliente@easybike.com', 'Cliente123!');
     const admin = await iniciarSesion('admin@easybike.com', 'Admin123!');
 
-    await request(app.getHttpServer())
+    const creadaCliente = await request(app.getHttpServer())
       .post('/reservas')
       .set('Authorization', `Bearer ${cliente.accessToken}`)
       .send({
@@ -411,7 +411,7 @@ describe('Easy Bike API (e2e)', () => {
         expect(body.voucher.paymentMethod).toBe('Pago físico al retirar la bicicleta');
       });
 
-    await request(app.getHttpServer())
+    const reservasCliente = await request(app.getHttpServer())
       .get('/reservas')
       .set('Authorization', `Bearer ${cliente.accessToken}`)
       .expect(200)
@@ -421,6 +421,36 @@ describe('Easy Bike API (e2e)', () => {
           true,
         );
       });
+    const reservaClienteId = (reservasCliente.body as Array<{ id: string }>)[0]?.id as string;
+
+    expect(reservaClienteId).toBeTruthy();
+
+    await request(app.getHttpServer())
+      .put(`/reservas/${reservaClienteId}`)
+      .set('Authorization', `Bearer ${cliente.accessToken}`)
+      .send({
+        fullName: 'Cliente Válido Actualizado',
+        date: '2026-07-12',
+        time: '12:00',
+        duration: 8,
+        pickupPoint: 'Punto Central Easy Bike',
+        notes: 'Reserva actualizada por cliente.',
+      })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.customerName).toBe('Cliente Válido Actualizado');
+        expect(body.date).toBe('2026-07-12');
+        expect(body.time).toBe('12:00');
+        expect(body.duration).toBe('8 horas');
+      });
+
+    await request(app.getHttpServer())
+      .put(`/reservas/${reservaClienteId}`)
+      .set('Authorization', `Bearer ${cliente.accessToken}`)
+      .send({
+        status: 'Completada',
+      })
+      .expect(400);
 
     await request(app.getHttpServer())
       .get('/admin/resumen')
@@ -450,6 +480,14 @@ describe('Easy Bike API (e2e)', () => {
       .expect(({ body }) => {
         expect(body.success).toBe(true);
         expect(body.reservation.origin).toBe('admin-store');
+      });
+
+    await request(app.getHttpServer())
+      .delete(`/reservas/${reservaClienteId}`)
+      .set('Authorization', `Bearer ${cliente.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.success).toBe(true);
       });
   });
 

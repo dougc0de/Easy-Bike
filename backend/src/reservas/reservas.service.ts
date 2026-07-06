@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -23,6 +24,7 @@ import { Bicicleta } from '../bicicletas/interfaces/bicicleta.interface';
 import type { RepositorioBicicletas } from '../bicicletas/repositorios/bicicletas.repositorio';
 import { CrearReservaTiendaDto } from './dto/crear-reserva-tienda.dto';
 import { ActualizarReservaDto } from './dto/actualizar-reserva.dto';
+import { ActualizarReservaClienteDto } from './dto/actualizar-reserva-cliente.dto';
 import { CrearReservaDto } from './dto/crear-reserva.dto';
 import { ListarReservasQueryDto } from './dto/listar-reservas.query.dto';
 import { Reserva } from './interfaces/reserva.interface';
@@ -59,6 +61,20 @@ export class ReservasService {
 
   async crearReservaTienda(dto: CrearReservaTiendaDto) {
     return this.crearReserva(dto, OrigenReserva.ADMIN_TIENDA, dto.handledByUserId ?? null);
+  }
+
+  async actualizarComoCliente(
+    id: string,
+    correoCliente: string,
+    dto: ActualizarReservaClienteDto,
+  ) {
+    const reserva = await this.obtenerPorId(id);
+    this.verificarReservaEditablePorCliente(reserva, correoCliente);
+
+    return this.actualizar(id, {
+      ...dto,
+      email: correoCliente,
+    });
   }
 
   async actualizar(id: string, dto: ActualizarReservaDto) {
@@ -106,6 +122,13 @@ export class ReservasService {
     return actualizada;
   }
 
+  async eliminarComoCliente(id: string, correoCliente: string) {
+    const reserva = await this.obtenerPorId(id);
+    this.verificarReservaEditablePorCliente(reserva, correoCliente);
+
+    return this.eliminar(id);
+  }
+
   async eliminar(id: string) {
     const eliminada = await this.repositorioReservas.eliminar(id);
 
@@ -117,6 +140,16 @@ export class ReservasService {
       success: true,
       message: 'Reserva eliminada correctamente.',
     };
+  }
+
+  private verificarReservaEditablePorCliente(reserva: Reserva, correoCliente: string) {
+    if (reserva.correoCliente.toLowerCase() !== correoCliente.trim().toLowerCase()) {
+      throw new ForbiddenException('No puedes modificar o eliminar reservas de otro cliente.');
+    }
+
+    if (reserva.estado === EstadoReserva.COMPLETADA) {
+      throw new ConflictException('No se puede modificar o eliminar una reserva completada.');
+    }
   }
 
   private validarReglasReserva(payload: {
