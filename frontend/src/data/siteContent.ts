@@ -4,6 +4,7 @@ import type {
   FooterColumn,
   FooterMeta,
   LoginHighlight,
+  LocationConfig,
   MilestoneItem,
   NavigationItem,
   StatItem,
@@ -42,6 +43,19 @@ export const homeBenefits: BenefitItem[] = [
       'La web deja claro el tiempo de uso, el punto de recojo y el estado actual de cada bicicleta.',
   },
 ]
+
+export const locationConfig: LocationConfig = {
+  title: 'Encuéntranos fácilmente',
+  subtitle: 'Ubicación oficial de Easy Bike para atención, reservas y retiro de bicicletas en León.',
+  address: 'Iglesia El Calvario, 2 cuadras al sur, en el Barrio El Calvario, León.',
+  schedule: 'Lunes a sábado · 8:00 a.m. - 8:00 p.m.',
+  contactPhone: '+505 8913-4973',
+  contactEmail: 'de575836@gmail.com',
+  ctaLabel: 'Abrir en Google Maps',
+  externalUrl: 'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',
+  imageUrl: '',
+  embedUrl: '',
+}
 
 export const footerColumns: FooterColumn[] = [
   {

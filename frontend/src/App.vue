@@ -19,6 +19,7 @@ import {
   homeBenefits,
   homeStats,
   loginHighlights,
+  locationConfig,
   navigationItems,
 } from './data/siteContent'
 import {
@@ -91,6 +92,7 @@ const headerItems = computed<NavigationItem[]>(() =>
 const headerSessionActionLabel = computed(() => (authSession.value ? 'Cerrar sesión' : undefined))
 
 const homePreviewBikes = computed(() => bikes.value.slice(0, 3))
+const resolvedLocationConfig = computed<LocationConfig>(() => publicLocationConfig.value ?? locationConfig)
 const showMapSection = computed(
   () => appReady.value && (currentPage.value === 'inicio' || currentPage.value === 'contactanos'),
 )
@@ -513,7 +515,7 @@ onBeforeUnmount(() => {
 
       <ContactView
         v-else-if="currentPage === 'contactanos'"
-        :location="publicLocationConfig"
+        :location="resolvedLocationConfig"
         :location-status="locationStatus"
         :location-message="locationMessage"
       />
@@ -573,7 +575,7 @@ onBeforeUnmount(() => {
 
     <MapSection
       v-if="showMapSection"
-      :location="publicLocationConfig"
+      :location="resolvedLocationConfig"
       :location-status="locationStatus"
       :location-message="locationMessage"
     />

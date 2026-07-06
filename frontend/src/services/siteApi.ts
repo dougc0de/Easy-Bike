@@ -13,6 +13,7 @@ const ACCESS_TOKEN_STORAGE_KEY = 'easybike-access-token'
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:3000'
 const BACKEND_UNAVAILABLE_MESSAGE =
   'No se pudo conectar con el backend de Easy Bike. Verifica que Render esté activo e inténtalo nuevamente.'
+const API_PAGE_LIMIT = 100
 
 interface AuthApiResponse {
   success: boolean
@@ -176,6 +177,12 @@ function buildLoginNote(session: AuthSession) {
     : 'Entrarás a tu perfil de cliente para gestionar reservas con autenticación real.'
 }
 
+function buildPaginatedPath(path: string, offset: number) {
+  const separator = path.includes('?') ? '&' : '?'
+
+  return `${path}${separator}limit=${API_PAGE_LIMIT}&offset=${offset}`
+}
+
 async function parseApiResponse<T>(response: Response): Promise<T> {
   const rawText = await response.text()
   let parsed: { message?: string | string[] } | null = null
@@ -237,6 +244,30 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, useAccessToke
   return parseApiResponse<T>(response)
 }
 
+async function fetchPaginatedCollection<TResponse, TMapped>(
+  path: string,
+  mapItem: (item: TResponse) => TMapped,
+  useAccessToken = false,
+) {
+  const collection: TMapped[] = []
+
+  for (let offset = 0; ; offset += API_PAGE_LIMIT) {
+    const page = await apiRequest<TResponse[]>(
+      buildPaginatedPath(path, offset),
+      { method: 'GET' },
+      useAccessToken,
+    )
+
+    collection.push(...page.map((item) => mapItem(item)))
+
+    if (page.length < API_PAGE_LIMIT) {
+      break
+    }
+  }
+
+  return collection
+}
+
 export function clearStoredAccessToken() {
   if (typeof window === 'undefined') return
 
@@ -248,11 +279,7 @@ export function hasStoredAccessToken() {
 }
 
 export async function fetchBikeCatalog() {
-  const result = await apiRequest<BikeApiResponse[]>('/bicicletas?limit=1000&offset=0', {
-    method: 'GET',
-  })
-
-  return result.map((bike) => mapApiBike(bike))
+  return fetchPaginatedCollection('/bicicletas', mapApiBike)
 }
 
 export async function fetchPublicLocationConfig() {
@@ -265,12 +292,9 @@ export async function fetchPublicLocationConfig() {
 
 export async function fetchReservationsForSession(session: AuthSession) {
   const endpoint =
-    session.role === 'administracion'
-      ? '/admin/reservas?limit=1000&offset=0'
-      : '/reservas?limit=1000&offset=0'
-  const result = await apiRequest<ReservationApiResponse[]>(endpoint, { method: 'GET' }, true)
+    session.role === 'administracion' ? '/admin/reservas' : '/reservas'
 
-  return result.map((reservation) => mapApiReservation(reservation))
+  return fetchPaginatedCollection(endpoint, mapApiReservation, true)
 }
 
 export async function submitReservation(payload: ReservationPayload, options: SubmitReservationOptions = {}) {
