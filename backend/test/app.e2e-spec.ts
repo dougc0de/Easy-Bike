@@ -338,8 +338,8 @@ describe('Easy Bike API (e2e)', () => {
       .expect(200)
       .expect(({ body }) => {
         expect(body.title).toBe('Encuéntranos fácilmente');
-        expect(body.contactPhone).toBe('8913-4973');
-        expect(body.contactEmail).toBe('hola@easybike.com');
+        expect(body.contactPhone).toBe('+505 8913-4973');
+        expect(body.contactEmail).toBe('de575836@gmail.com');
         expect(body.externalUrl).toContain('google.com/maps');
       });
 

@@ -572,11 +572,11 @@ export async function createTestRepositoryBundle(): Promise<TestRepositoryBundle
     {
       id: '3d2feecb-1558-4a18-832a-0d5517e83009',
       titulo: 'Encuéntranos fácilmente',
-      subtitulo: 'Ubicación operativa para reservas, soporte y retiro de bicicletas.',
+      subtitulo: 'Ubicación oficial de Easy Bike para atención, reservas y retiro de bicicletas en León.',
       direccion: 'Iglesia El Calvario, 2 cuadras al sur, Barrio El Calvario, León.',
       horario: 'Lunes a sábado · 8:00 a.m. - 8:00 p.m.',
-      telefonoContacto: '8913-4973',
-      emailContacto: 'hola@easybike.com',
+      telefonoContacto: '+505 8913-4973',
+      emailContacto: 'de575836@gmail.com',
       etiquetaCta: 'Abrir en Google Maps',
       urlExterna:
         'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',

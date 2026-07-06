@@ -175,6 +175,55 @@ create index if not exists idx_contactos_estado on public.mensajes_contacto(esta
 -- Catálogo oficial Easy Bike:
 -- Estas sentencias restauran o actualizan el catálogo real del negocio sin tocar usuarios,
 -- reservas ni cambiar IDs de bicicletas ya existentes con el mismo nombre.
+--
+-- Configuración pública de mapa y contacto:
+-- Estas sentencias restauran la ubicación operativa real de Easy Bike sin tocar usuarios
+-- ni reservas. Si ya existe el registro oficial, lo actualiza; si no existe, lo inserta.
+
+update public.configuraciones_ubicacion
+set
+  subtitulo = 'Ubicación oficial de Easy Bike para atención, reservas y retiro de bicicletas en León.',
+  direccion = 'Iglesia El Calvario, 2 cuadras al sur, en el Barrio El Calvario, León.',
+  horario = 'Lunes a sábado · 8:00 a.m. - 8:00 p.m.',
+  contact_phone = '+505 8913-4973',
+  contact_email = 'de575836@gmail.com',
+  etiqueta_cta = 'Abrir en Google Maps',
+  url_externa = 'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',
+  url_imagen = '',
+  url_embed = '',
+  updated_at = timezone('utc', now())
+where lower(titulo) = lower('Encuéntranos fácilmente');
+
+insert into public.configuraciones_ubicacion (
+  id,
+  titulo,
+  subtitulo,
+  direccion,
+  horario,
+  contact_phone,
+  contact_email,
+  etiqueta_cta,
+  url_externa,
+  url_imagen,
+  url_embed
+)
+select
+  '3d2feecb-1558-4a18-832a-0d5517e83009',
+  'Encuéntranos fácilmente',
+  'Ubicación oficial de Easy Bike para atención, reservas y retiro de bicicletas en León.',
+  'Iglesia El Calvario, 2 cuadras al sur, en el Barrio El Calvario, León.',
+  'Lunes a sábado · 8:00 a.m. - 8:00 p.m.',
+  '+505 8913-4973',
+  'de575836@gmail.com',
+  'Abrir en Google Maps',
+  'https://www.google.com/maps/search/?api=1&query=12%C2%B026%2706.8%22N%2086%C2%B052%2723.2%22W',
+  '',
+  ''
+where not exists (
+  select 1
+  from public.configuraciones_ubicacion
+  where lower(titulo) = lower('Encuéntranos fácilmente')
+);
 
 update public.bicicletas
 set
